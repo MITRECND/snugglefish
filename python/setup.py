@@ -5,7 +5,7 @@ LIBRARY_DIRS  = ['/usr/lib', '/usr/local/lib']
 
 # the c++ extension module
 extension_mod = Extension("pysnugglefish",
-                          sources=["pysnugglefish.c"],
+                          sources=["pysnugglefish.cpp"],
                           include_dirs = INCLUDE_DIRS,
                           library_dirs = LIBRARY_DIRS
                           )
