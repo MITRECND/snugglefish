@@ -33,7 +33,6 @@ static PyObject * search_wrapper(PyObject * self, PyObject * args)
     
     for(uint32_t i = 0; i < results.size(); i++){
         std::cout << results[i] << std::endl;
-        //printf("%s\n", results[i]);
     }
     //search(indexFileName, searchString, ngramSize);
     Py_INCREF(Py_None);
@@ -45,14 +44,40 @@ static PyObject * index_wrapper(PyObject * self, PyObject * args)
     char * indexFileName;
     char * fileNames;
     int ngramSize;
+    int max_buffer = 0;
+    int max_files = 0;
     
     // parse arguments
-    if (!PyArg_ParseTuple(args, "ssi", &indexFileName, &fileNames, &ngramSize)) {
+    if (!PyArg_ParseTuple(args, "ssi|ii", &indexFileName, &fileNames, &ngramSize, &max_buffer, &max_files)) {
         return NULL;
     }
     
     // run the actual indexing function
-    //index(indexFileName, fileNames, ngramSize);
+    try{
+        nGramIndex ngramindex(ngramSize, indexFileName);
+        if (max_files > 0){
+            ngramindex.setmaxFiles(max_files);
+        }
+        
+        if (max_buffer > 0){
+            ngramindex.setmaxBufferSize(max_buffer);
+        }
+        fileIndexer indexer1(ngramSize);
+        
+        fileNames = strtok (fileNames,";");
+        while (fileNames != NULL)
+        {
+            vector<uint32_t>* processedFile = indexer1.processFile(fileNames);
+            if(processedFile != 0)
+                ngramindex.addNGrams(processedFile, fileNames);
+            fileNames = strtok (NULL, ";");
+        }
+        
+    } catch (exception& e){
+        std::cout << "Error:" << e.what() << std::endl;
+//        handler(SIGSEGV);
+    }
+
     Py_INCREF(Py_None);
     return Py_None;
 }
