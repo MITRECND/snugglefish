@@ -7,34 +7,51 @@ Description
 ===========
 PySnugglefish is a python wrapper around the snugglefish C++ codebase. It exposes the search and index functions to python modules.
 
-Using PySnugglefish
-===================
+PySnugglefish Instances
+=======================
 The pysnugglefish module is pretty simple to utilize.
 Start by importing the module, it's pretty easy:
 
 		import pysnugglefish
 
-The module exposes the Snugglefish index function.
-Just give the method the name of the index file to create, the files to index, and the n-gram size to use.
-You may optionally specify both the maximum file count and maximum buffer size.
-		
-		index = "index-name"
-		files = "list; of; filenames"
-		size = 3
-		pysnugglefish.index(index, files, size)
-		
-		buffer_size = 9001
-		file_count = 2000
-		pysnugglefish.index(index, files, size, buffer_size, file_count)
-		
-The index function returns no value.  
+To execute snugglefish functions, create an interface through pysnugglefish:
 
-This module also exposes the ability to search an existing index file.
+		obj = pysnugglefish.init()
+		
+You can optionally specify the index file to use as an init argument.
 
-		index = "index-name"
-		search = "search content" # search string must be >= size
-		size = 3
-		pysnugglefish.search(index, search, size)
+		obj = pysnugglefish.init("/path/to/indexfile")
+		
+
+Indexing with PySnugglefish
+===========================
+
+To index, simply feed the pysnugglefish instance with configuration options, then run the indexing function. 
+
+		obj = pysnugglefish.init()
+		obj.index = "/path/to/indexfile"
+		obj.file_list = "/path/to/file1;/path/to/the/second/file" # semicolon-delimited list of files to index
+		obj.ngram_size = 5 # defaults to 3
+		obj.max_buffer = 9001 # defaults to no maximum (0)
+		obj.max_files = 100000 # defaults to no maximum (0)
+		obj.make_index # create the index file
+
+The snugglefish code that the module wraps will print out information about the process to the console.  
+**Note:** The parsing of the file_list attribute causes pysnugglefish to eat the value.
+After running the indexing function, the pysnugglefish object will have an empty file_list value.
+
+Searching with PySnugglefish
+============================
+The module facilitates searching a specified index.
+Again, provide configuration, then execute your search.
+
+		obj = pysnugglefish.init()
+		obj.index = "/path/to/indexfile"
+		obj.ngram_size = 4 # better equal the ngram_size used to generate the index!
+		bitstring = "\x41\x42\x43"
+		files_found = obj.search(bitstring)
+		
+The search function returns an array containing the filenames of each file in the index which the snugglefish code matched to the input search string.
 
 Caveats
 =======
