@@ -240,5 +240,5 @@ PyMODINIT_FUNC initpysnugglefish(void) {
     Py_INCREF(SnuggleError);
     PyModule_AddObject(m, "error", SnuggleError);
     Py_INCREF(&pysnugglefish_Type);
-    PyModule_AddObject(m, "Pysnugglefish", (PyObject *)&pysnugglefish_Type);
+    PyModule_AddObject(m, "init", (PyObject *)&pysnugglefish_Type);
 }
