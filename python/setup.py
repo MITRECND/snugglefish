@@ -1,11 +1,12 @@
 from distutils.core import setup, Extension
 
-INCLUDE_DIRS  = ['/usr/local/include', '/opt/local/include', '/usr/include', '../include', '../src']
+INCLUDE_DIRS  = ['/usr/local/include', '/opt/local/include', '/usr/include', '../include']
 LIBRARY_DIRS  = ['/usr/lib', '/usr/local/lib']
 
 # the c++ extension module
 extension_mod = Extension("pysnugglefish",
-                          sources=["pysnugglefish.cpp"],
+                          sources=["../src/fileIndexer.cpp", "../src/nGramBase.cpp", "../src/nGramIndex.cpp",
+                          "../src/nGramSearch.cpp", "../snugglefish.cpp", "pysnugglefish.cpp"],
                           include_dirs = INCLUDE_DIRS,
                           library_dirs = LIBRARY_DIRS
                           )

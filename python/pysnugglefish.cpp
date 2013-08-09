@@ -3,11 +3,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
-#include "../src/fileIndexer.cpp"
-#include "../src/nGramBase.cpp"
-#include "../src/nGramIndex.cpp"
-#include "../src/nGramSearch.cpp"
-#include "../snugglefish.cpp"
+#include "../include/snugglefish.h"
 
 using namespace std;
 
@@ -150,7 +146,7 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
         return NULL;
     }
   
-	vector<string> found = search(PyString_AsString(self->index), searchString, self->ngram_size);
+	vector<string> found = do_search(PyString_AsString(self->index), searchString, self->ngram_size);
 	
     PyObject *ret = PyList_New(found.size());
     for(int i = 0; i < found.size(); i++) {
@@ -167,7 +163,7 @@ static PyObject * pysnugglefish_index(pysnugglefish * self) {
 		fileNames.push_back(files);
         files = strtok (NULL, ";");
     }
-	index(PyString_AsString(self->index), fileNames, self->ngram_size, self->max_files, self->max_buffer);
+	make_index(PyString_AsString(self->index), fileNames, self->ngram_size, self->max_files, self->max_buffer);
 	self->file_list = Py_BuildValue("s", "");
     Py_INCREF(Py_None);
     return Py_None;
