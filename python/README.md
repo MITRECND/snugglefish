@@ -23,6 +23,11 @@ You can optionally specify the index file to use as an init argument.
 		obj = pysnugglefish.init("/path/to/indexfile")
 		
 
+Or, you can specify the index file and the ngram size as init arguments.
+		
+		ngram_sz = 5
+		obj = pysnugglefish.init("/path/to/indexfile", ngram_sz)
+
 Indexing with PySnugglefish
 ===========================
 
