@@ -182,7 +182,7 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
         return NULL;
     }
   
-	vector<string> found = do_search(PyString_AsString(self->index), searchString, self->ngram_size, false);
+	vector<string> found = search(PyString_AsString(self->index), searchString, self->ngram_size, false);
 	
     PyObject *ret = PyList_New(found.size());
     for(int i = 0; i < found.size(); i++) {

@@ -238,11 +238,11 @@ int main(int argc, char *argv[]){
         // Get the string to search for
         if (optind < argc){
             searchString = argv[optind];
-            do_search(indexFileName, searchString, ngramSize, true);
+            search(indexFileName, searchString, ngramSize, true);
         }else{
             cin >> searchString; 
             //cout << "A search string is required" << endl;
-            do_search(indexFileName, searchString, ngramSize, true);
+            search(indexFileName, searchString, ngramSize, true);
 
         }
     }else{
@@ -299,7 +299,7 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
     }
 }
 
-vector<string> do_search(string indexFileName, string searchString, uint32_t ngramSize, bool verbose){
+vector<string> search(string indexFileName, string searchString, uint32_t ngramSize, bool verbose){
 	vector<string> ret;
     if(searchString.size() < ngramSize){
         cout << "Search string size is smaller than Ngram size, the search string must be greater than or equal to the ngram size" << endl;
