@@ -43,12 +43,8 @@ static PyObject * pysnugglefish_new(PyTypeObject *type, PyObject *args, PyObject
         if (self->index == NULL) {
             Py_DECREF(self);
             return NULL;
-         }
-        self->file_list = PyString_FromString("");
-        if (self->file_list == NULL) {
-            Py_DECREF(self);
-            return NULL;
-         }
+		}
+		self->file_list = PyList_New(0);
         self->max_buffer = 0;
         self->ngram_size = 3;
         self->max_files = 0;
@@ -92,7 +88,7 @@ static PyMemberDef pysnugglefish_members[] = {
     {"index", T_OBJECT_EX, offsetof(pysnugglefish, index), 0,
      "index name"},
     {"file_list", T_OBJECT_EX, offsetof(pysnugglefish, file_list), 0,
-     "file names"},
+     "list of file names"},
     {"ngram_size", T_INT, offsetof(pysnugglefish, ngram_size), 0,
      "n-gram size"},
     {"max_buffer", T_INT, offsetof(pysnugglefish, max_buffer), 0,
@@ -100,80 +96,6 @@ static PyMemberDef pysnugglefish_members[] = {
     {"max_files", T_INT, offsetof(pysnugglefish, max_files), 0,
      "max files to use"},
     { NULL }  /* Sentinel */
-};
-
-/*
-* Getter defined for index member.
-*/
-static PyObject * pysnugglefish_getindex(pysnugglefish *self, void *closure) {
-    Py_INCREF(self->index);
-    return self->index;
-}
-
-/*
-* Setter defined for index member.
-*/
-static int pysnugglefish_setindex(pysnugglefish *self, PyObject *value, void *closure) {
-  if (value == NULL) {
-    PyErr_SetString(PyExc_TypeError, "Cannot delete the index attribute");
-    return -1;
-  }
-  
-  if (! PyString_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, "The index attribute value must be a string");
-    return -1;
-  }
-      
-  Py_DECREF(self->index);
-  Py_INCREF(value);
-  self->index = value;    
-
-  return 0;
-}
-
-/*
-* Getter defined for file_list member.
-*/
-static PyObject * pysnugglefish_getfilelist(pysnugglefish *self, void *closure) {
-    Py_INCREF(self->file_list);
-    return self->file_list;
-}
-
-/*
-* Setter defined for index member.
-*/
-static int pysnugglefish_setfilelist(pysnugglefish *self, PyObject *value, void *closure) {
-  if (value == NULL) {
-    PyErr_SetString(PyExc_TypeError, "Cannot delete the file_list attribute");
-    return -1;
-  }
-  
-  if (! PyString_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, 
-                    "The file_list attribute value must be a string");
-    return -1;
-  }
-      
-  Py_DECREF(self->file_list);
-  Py_INCREF(value);
-  self->file_list = value;    
-
-  return 0;
-}
-
-/*
-* Define set of getters/setters for reference by Python module.
-*/
-static PyGetSetDef pysnugglefish_getseters[] = {
-    {"index", 
-     (getter)pysnugglefish_getindex, (setter)pysnugglefish_setindex,
-     "index",
-     NULL},
-    {"file_list", 
-     (getter)pysnugglefish_getfilelist, (setter)pysnugglefish_setfilelist,
-     "file_list",
-     NULL},
-    {NULL}  /* Sentinel */
 };
 
 /*
@@ -201,20 +123,13 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 * Output the index at the path specified in the pysnugglefish index member.
 */
 static PyObject * pysnugglefish_index(pysnugglefish * self) {
-	vector<string> fileNames;
-	char *files = PyString_AsString(self->file_list);
-	
-	// parse the file_list member by splitting on semicolon
-	files = strtok (files, ";");
-    while (files != NULL) {
-		fileNames.push_back(files);
-        files = strtok (NULL, ";");
-    }
-	
-	// pass off to snugglefish
-	make_index(PyString_AsString(self->index), fileNames, self->ngram_size, self->max_files, self->max_buffer);
-	self->file_list = Py_BuildValue("s", ""); // reset the file_list attribute
-	
+	vector<string> files;
+	int ct = PyList_Size(self->file_list);
+	int i;
+	for (i = 0; i < ct; i++) {
+		files.push_back(PyString_AsString(PyList_GetItem(self->file_list, i)));
+	}
+	make_index(PyString_AsString(self->index), files, self->ngram_size, self->max_files, self->max_buffer);
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -229,6 +144,78 @@ static PyMethodDef pysnugglefish_methods[] = {
 };
 
 /*
+* Define getter for data attributes of pysnugglefish objects.
+*/
+static PyObject *pysnugglefish_getattr(pysnugglefish *self, char *attrname) {
+	if (strcmp(attrname, "index") == 0) {
+		return self->index;
+	} else if (strcmp(attrname, "file_list") == 0) {
+		Py_INCREF(self->file_list);
+		return self->file_list;
+	} else if (strcmp(attrname, "max_files") == 0) {
+		return Py_BuildValue("i", self->max_files);
+	} else if (strcmp(attrname, "max_buffer") == 0) {
+		return Py_BuildValue("i", self->max_buffer);
+	} else if (strcmp(attrname, "ngram_size") == 0) {
+		return Py_BuildValue("i", self->ngram_size);
+	} else if (strcmp(attrname, "search") == 0) { 
+		return PyObject_GenericGetAttr((PyObject *)self, Py_BuildValue("s", attrname));
+	} else if (strcmp(attrname, "make_index") == 0) { 
+		return PyObject_GenericGetAttr((PyObject *)self, Py_BuildValue("s", attrname));
+	} else {
+		PyErr_SetString(PyExc_AttributeError, attrname);
+		return NULL;
+	}
+}
+
+/*
+* Define setter for data attributes of pysnugglefish objects.
+*/
+static int pysnugglefish_setattr(pysnugglefish *self, char *name, PyObject *value) {
+	int result = -1;
+	if (strcmp(name, "index") == 0) {
+		PyErr_SetString(SnuggleError, "Index is read-only after init.");
+	} else if (strcmp(name, "file_list") == 0) {
+		result = 0;
+		if (PyList_Check(value) && value != NULL) {
+			Py_XDECREF(self->file_list);
+	        Py_INCREF(value);
+			self->file_list = value;
+		} else {
+			result = -1;
+		}
+	} else if (strcmp(name, "max_files") == 0 && value != NULL) {
+		int newval = 0;
+		if (PyArg_Parse(value, "i", &newval)) {
+			if (newval > 0) {
+				self->max_files = newval;
+	    		result = 0;
+			}
+		}
+	} else if (strcmp(name, "max_buffer") == 0 && value != NULL) {
+		int newval = 0;
+		if (PyArg_Parse(value, "i", &newval)) {
+			if (newval > 0) {
+				self->max_buffer = newval;
+	    		result = 0;
+			}
+		}
+	} else if (strcmp(name, "ngram_size") == 0 && value != NULL) {
+		int newval = 0;
+		if (PyArg_Parse(value, "i", &newval)) {
+			if (newval == 2 || newval == 3) {
+				self->ngram_size = newval;
+	    		result = 0;
+			}
+		}
+	} else {
+		PyErr_SetString(PyExc_AttributeError, name);
+		result = -1;
+	}
+	return result;
+}
+
+/*
 * Define the Python type for pysnugglefish objects.
 * Configures pysnugglefish with its getters, setters, destructors, etc.
 */
@@ -240,8 +227,8 @@ PyTypeObject pysnugglefish_Type = {
     0,                         			/*tp_itemsize*/
     (destructor)pysnugglefish_dealloc, 	/*tp_dealloc*/
     0,                         			/*tp_print*/
-    0,                         			/*tp_getattr*/
-    0,                         			/*tp_setattr*/
+    (getattrfunc)pysnugglefish_getattr,                         			/*tp_getattr*/
+    (setattrfunc)pysnugglefish_setattr, /*tp_setattr*/
     0,                         			/*tp_compare*/
     0,                         			/*tp_repr*/
     0,                         			/*tp_as_number*/
@@ -263,7 +250,7 @@ PyTypeObject pysnugglefish_Type = {
     0,		               				/* tp_iternext */
     pysnugglefish_methods,             	/* tp_methods */
     pysnugglefish_members,             	/* tp_members */
-    pysnugglefish_getseters,           	/* tp_getset */
+    0,           	/* tp_getset */
     0,                         			/* tp_base */
     0,                         			/* tp_dict */
     0,                         			/* tp_descr_get */
