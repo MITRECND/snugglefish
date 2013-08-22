@@ -32,15 +32,13 @@ Indexing with PySnugglefish
 To index, simply feed the pysnugglefish instance with configuration options, then run the indexing function. 
 
 		obj = pysnugglefish.init("/path/to/indexfile")
-		obj.file_list = "/path/to/file1;/path/to/the/second/file" # semicolon-delimited list of files to index
+		obj.file_list = ["/path/to/file1", "/path/to/file2"]
 		obj.ngram_size = 2 # defaults to 3
 		obj.max_buffer = 9001 # defaults to no maximum (0)
 		obj.max_files = 100000 # defaults to no maximum (0)
 		obj.make_index # create the index file
 
 The snugglefish code that the module wraps will print out information about the process to the console.  
-**Note:** The parsing of the file_list attribute causes pysnugglefish to eat the value.
-After running the indexing function, the pysnugglefish object will have an empty file_list value.
 
 Searching with PySnugglefish
 ============================
