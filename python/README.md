@@ -16,27 +16,24 @@ Start by importing the module, it's pretty easy:
 
 To execute snugglefish functions, create an interface through pysnugglefish:
 
-		obj = pysnugglefish.init()
-		
-You can optionally specify the index file to use as an init argument.
-
 		obj = pysnugglefish.init("/path/to/indexfile")
 		
 
 Or, you can specify the index file and the ngram size as init arguments.
 		
-		ngram_sz = 5
+		ngram_sz = 2
 		obj = pysnugglefish.init("/path/to/indexfile", ngram_sz)
+
+Ngram size must be either 2 or 3.
 
 Indexing with PySnugglefish
 ===========================
 
 To index, simply feed the pysnugglefish instance with configuration options, then run the indexing function. 
 
-		obj = pysnugglefish.init()
-		obj.index = "/path/to/indexfile"
+		obj = pysnugglefish.init("/path/to/indexfile")
 		obj.file_list = "/path/to/file1;/path/to/the/second/file" # semicolon-delimited list of files to index
-		obj.ngram_size = 5 # defaults to 3
+		obj.ngram_size = 2 # defaults to 3
 		obj.max_buffer = 9001 # defaults to no maximum (0)
 		obj.max_files = 100000 # defaults to no maximum (0)
 		obj.make_index # create the index file
@@ -50,9 +47,8 @@ Searching with PySnugglefish
 The module facilitates searching a specified index.
 Again, provide configuration, then execute your search.
 
-		obj = pysnugglefish.init()
-		obj.index = "/path/to/indexfile"
-		obj.ngram_size = 4 # better equal the ngram_size used to generate the index!
+		obj = pysnugglefish.init("/path/to/indexfile")
+		obj.ngram_size = 2 # better equal the ngram_size used to generate the index!
 		bitstring = "\x41\x42\x43"
 		files_found = obj.search(bitstring)
 		

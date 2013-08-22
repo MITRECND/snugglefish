@@ -66,8 +66,8 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
 
     static char *kwlist[] = {"index", "ngram_size", NULL};
 
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|Si", kwlist, &index, &ngrams)) {
-        return -1; // index path and ngram size optional
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "S|i", kwlist, &index, &ngrams)) {
+        return -1; // ngram size optional
 	}
 
 	if (ngrams != 2 && ngrams != 3) {
