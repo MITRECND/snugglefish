@@ -39,7 +39,7 @@ extern "C" {
 
     void make_index(std::string indexFileName, std::vector <std::string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer);
 
-    std::vector<std::string> search(std::string indexFileName, std::string searchString, uint32_t ngramSize, bool verbose);
+    std::vector<std::string> search(std::string indexFileName, std::string searchString, uint32_t ngramSize);
 
 #ifdef __cplusplus
 }
