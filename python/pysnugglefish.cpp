@@ -70,6 +70,10 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
         return -1; // index path and ngram size optional
 	}
 
+	if (ngrams != 2 && ngrams != 3) {
+	    PyErr_SetString(PyExc_TypeError, "N-Gram size must be set to 2 or 3.");
+	    return -1;
+	}
     if (index) { // if index was provided, manage references and set
         tmp = self->index;
         Py_INCREF(index);
