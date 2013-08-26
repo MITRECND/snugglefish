@@ -1,5 +1,4 @@
-#Approved for Public Release; Distribution Unlimited: 13-1937
-
+#
 # Copyright (c) 2013 The MITRE Corporation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -10,7 +9,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-#
+# 
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -22,27 +21,29 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
+#
 
-all: snugglefish
+from distutils.core import setup, Extension
 
-snugglefish: snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o
-	g++ -Iinclude -g -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o  -o snugglefish
+INCLUDE_DIRS  = ['/usr/local/include', '/opt/local/include', '/usr/include', '../include']
+LIBRARY_DIRS  = ['/usr/lib', '/usr/local/lib']
 
-snugglefish.o: snugglefish.cpp
-	g++ -Iinclude -g -rdynamic -c snugglefish.cpp
+# the c++ extension module
+extension_mod = Extension("pysnugglefish",
+                          sources=["../src/fileIndexer.cpp", "../src/nGramBase.cpp", "../src/nGramIndex.cpp",
+                          "../src/nGramSearch.cpp", "../snugglefish.cpp", "pysnugglefish.cpp"],
+                          include_dirs = INCLUDE_DIRS,
+                          library_dirs = LIBRARY_DIRS
+                          )
 
-nGramBase.o: src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramBase.cpp
 
-nGramIndex.o: src/nGramIndex.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramIndex.cpp 
-
-nGramSearch.o: src/nGramSearch.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramSearch.cpp
-
-fileIndexer.o: src/fileIndexer.cpp
-	g++ -Iinclude -g -rdynamic -c src/fileIndexer.cpp
-
-clean: 
-	rm -rf *.o src/*.o snugglefish
-
+setup (# Distribution meta-data
+       name = "pysnugglefish",
+       version = "0.1",
+       description = "python bindings for snugglefish",
+       author = "Shayne Snow",
+       author_email = "scaswell@mitre.org",
+       license = "BSD",
+       long_description = "Python bindings for snugglefish",
+       ext_modules = [ extension_mod ]
+       )

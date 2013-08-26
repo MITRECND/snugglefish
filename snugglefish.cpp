@@ -32,10 +32,11 @@ SUCH DAMAGE.
 // Allows for the indexing and searching of a large amount of samples in a short 
 // period of time.
 
-#include "include/nGramBase.h"
-#include "include/nGramSearch.h"
-#include "include/nGramIndex.h"
-#include "include/fileIndexer.h"
+#include <nGramBase.h>
+#include <nGramSearch.h>
+#include <nGramIndex.h>
+#include <fileIndexer.h>
+#include <snugglefish.h>
 #include <iostream>
 #include <sstream>
 #include <getopt.h>
@@ -99,8 +100,6 @@ void handler(int sig) {
 }
 
 void printHelp();
-void index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer);
-void search(string indexFileName, string searchString, uint32_t ngramSize);
 
 
 int main(int argc, char *argv[]){
@@ -234,23 +233,25 @@ int main(int argc, char *argv[]){
             }
         }
         //Eventually options should be sent as a structure
-        index(indexFileName, fileList, ngramSize, max_files, max_buffer);
-    } else if(searchFlag){
+        make_index(indexFileName, fileList, ngramSize, max_files, max_buffer);
+    } else if(searchFlag) {
         // Get the string to search for
-        if (optind < argc){
-            searchString = argv[optind];
-            search(indexFileName, searchString, ngramSize);
-        }else{
-            cin >> searchString; 
-            //cout << "A search string is required" << endl;
-            search(indexFileName, searchString, ngramSize);
-
-        }
-    }else{
+		if (optind < argc) {
+			searchString = argv[optind];
+		} else {
+			cin >> searchString;
+		}
+	    if (searchString.size() < ngramSize){
+	        cout << "Search string size is smaller than Ngram size, the search string must be greater than or equal to the ngram size" << endl;
+	    } else {
+			vector<string> found = search(indexFileName, searchString, ngramSize);
+			for(uint32_t i = 0; i < found.size(); i++){
+       			cout << found[i] << endl;
+   			}
+		}
+    } else{
         printHelp();
     }
-
-
 
     return 0;
 }
@@ -275,8 +276,7 @@ void printHelp(){
 
 }
 
-
-void index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer){
+void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer){
     try{
         nGramIndex ngramindex(ngramSize, indexFileName);
         if (max_files > 0){
@@ -287,7 +287,6 @@ void index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, 
             ngramindex.setmaxBufferSize(max_buffer);
         }
         fileIndexer indexer1(ngramSize);
-
 
         for(uint32_t i = 0; i < fileNames.size(); i++){
             vector<uint32_t>* processedFile = indexer1.processFile(fileNames[i].c_str());
@@ -301,16 +300,9 @@ void index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, 
     }
 }
 
-void search(string indexFileName, string searchString, uint32_t ngramSize){
-    if(searchString.size() < ngramSize){
-        cout << "Search string size is smaller than Ngram size, the search string must be greater than or equal to the ngram size" << endl;
-        return;
-    }
-    nGramSearch searcher(ngramSize, indexFileName);
-    vector <string> results = searcher.searchNGrams(searcher.stringToNGrams(searchString));
-
-    for(uint32_t i = 0; i < results.size(); i++){
-        cout << results[i] << endl;
-    }
-    return;
+vector<string> search(string indexFileName, string searchString, uint32_t ngramSize){
+	vector<string> ret;
+	nGramSearch searcher(ngramSize, indexFileName);
+	ret = searcher.searchNGrams(searcher.stringToNGrams(searchString));
+    return ret;
 }
