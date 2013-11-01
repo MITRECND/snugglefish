@@ -26,23 +26,23 @@
 all: snugglefish
 
 snugglefish: snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o
-	g++ -Iinclude -g -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o  -o snugglefish
+	g++ -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o  -o snugglefish
 
 snugglefish.o: snugglefish.cpp
-	g++ -Iinclude -g -rdynamic -c snugglefish.cpp
+	g++ -Iinclude -g -c snugglefish.cpp
 
 nGramBase.o: src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramBase.cpp
+	g++ -Iinclude -g -c src/nGramBase.cpp
 
 nGramIndex.o: src/nGramIndex.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramIndex.cpp 
+	g++ -Iinclude -g -c src/nGramIndex.cpp
 
 nGramSearch.o: src/nGramSearch.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -rdynamic -c src/nGramSearch.cpp
+	g++ -Iinclude -g -c src/nGramSearch.cpp
 
 fileIndexer.o: src/fileIndexer.cpp
-	g++ -Iinclude -g -rdynamic -c src/fileIndexer.cpp
+	g++ -Iinclude -g -c src/fileIndexer.cpp
 
 clean: 
-	rm -rf *.o src/*.o snugglefish
+	rm -rf *.o snugglefish
 
