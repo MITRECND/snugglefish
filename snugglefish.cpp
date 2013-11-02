@@ -81,14 +81,14 @@ uint32_t cpu_count(){
              << strerror(errno) << endl;
         return 1;
     }
-    return procs;
+    return (uint32_t) procs;
 }
 
 
 
 void handler(int sig) {
   void *array[10];
-  size_t size;
+  int size;
 
   // get void*'s for all entries on the stack
   size = backtrace(array, 10);

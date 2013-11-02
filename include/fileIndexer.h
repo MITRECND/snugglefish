@@ -55,7 +55,7 @@ namespace snugglefish {
 
         private:
             std::vector<uint32_t>* processNgrams(unsigned char *buf, uint64_t fileSize);
-            bool* processNgrams(unsigned char *buf, uint64_t fileSize, bool ngramList[]);
+            void processNgrams(unsigned char *buf, uint64_t fileSize, bool ngramList[]);
 
             uint64_t filesProcessed;
             bool verbose;

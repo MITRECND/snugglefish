@@ -27,11 +27,12 @@ SUCH DAMAGE.
 */
 
 
-#include "../include/nGramIndex.h"
+#include "nGramIndex.h"
 #include <iostream>
 #include <stdexcept>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
@@ -44,7 +45,7 @@ using namespace std;
 
 nGramIndex::nGramIndex( uint32_t ngramLength, string indexFileName)
     :nGramBase(ngramLength, indexFileName), bufferMax(MAX_BUFFER_SIZE),
-    maxFiles(MAX_FILES), flush(false), buffer_memory_usage(0) {
+    buffer_memory_usage(0), flush(false), maxFiles(MAX_FILES) {
 
 
     this->maxFileNameLength = DEFAULT_MAX_FILENAME_SIZE;
@@ -96,7 +97,7 @@ bool nGramIndex::loadFileIdFile(){
 //Creates and opens an Ngram file
 //which is effectively an empty file with the right name
 bool nGramIndex::createNGramFile(){
-    uint32_t ngram_fd, ret_val;
+    uint32_t ngram_fd;
     string filename = nGramFileName;
 
     char number_string[FILE_NUM_BUFFER_SIZE];
@@ -118,7 +119,7 @@ bool nGramIndex::createNGramFile(){
 //Creates and opens an index file
 //Which only has the standard header written
 bool nGramIndex::createIndexFile(ngram_t_indexfcount num_files){
-    uint32_t index_fd, ret_val;
+    uint32_t index_fd;
     
     string filename = indexFileName;
 
@@ -270,10 +271,10 @@ void nGramIndex::flushAll(){
 // Flush the file names to the file id file
 ngram_t_indexfcount nGramIndex::flushFiles(){
     //Write FileNames to File ID file
-    ngram_t_indexfcount num_files = fileNameList.size();
+    ngram_t_indexfcount num_files = (ngram_t_indexfcount) fileNameList.size();
     char* fileNameBuffer = new char[maxFileNameLength * fileNameList.size()];
 
-    for(uint64_t i = 0; i < fileNameList.size(); i++){
+    for(unsigned long i = 0; i < fileNameList.size(); i++){
         strncpy(fileNameBuffer + (i * maxFileNameLength), fileNameList[i].c_str(), maxFileNameLength);
     }
 
@@ -308,7 +309,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     //Write Buffer -- write out entires in chunks so writes aren't too small
     uint64_t max_entries = WRITE_BUFFER_SIZE  / NUM_FILES_FIELD;
     ngram_t_fidtype* write_buffer = new ngram_t_fidtype[max_entries];
-    uint64_t current_entries = 0;
+    size_t current_entries = 0;
 
     //Index Buffer -- write it out in one big chunk
     uint8_t* index_buffer = new uint8_t[(INDEX_ENTRY_SIZE) * maxNgram];  
@@ -320,7 +321,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
             //Is the buffer full enough?
             if(current_entries + output_buffer[i].elements_size > max_entries){
                 //Write all that we buffered up
-                int32_t written = write(nGramFile, write_buffer, current_entries * NUM_FILES_FIELD);
+                ssize_t written = write(nGramFile, write_buffer, current_entries * NUM_FILES_FIELD);
                 if(written == -1){
                     cerr << "Error: " <<strerror(errno) << endl;
                     throw runtime_error("Write buffer not written");
@@ -329,7 +330,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
                 current_entries = 0;
             }
 
-            uint64_t counter = 0;
+            uint32_t counter = 0;
             while(output_buffer[i].elements_size > 0){
                 counter++;
                 write_buffer[current_entries++] = output_buffer[i].elements->front();
@@ -354,7 +355,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     //Flush anything left
     if (current_entries > 0){
         //Write all that we buffered up
-        int32_t written = write(nGramFile, write_buffer, current_entries * NUM_FILES_FIELD);
+        ssize_t written = write(nGramFile, write_buffer, (size_t) (current_entries * NUM_FILES_FIELD));
         if(written == -1){
             cerr << "Error: " <<strerror(errno) << endl;
             throw runtime_error("Write buffer not written");
@@ -364,7 +365,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     delete[] write_buffer;
 
     //Flush the index file
-    write(indexFile, index_buffer, (INDEX_ENTRY_SIZE) * maxNgram);
+    write(indexFile, index_buffer, (size_t) (INDEX_ENTRY_SIZE * maxNgram));
     delete[] index_buffer;
 
     cout << "Flushed " << bytes_flushed << " Bytes " << endl;

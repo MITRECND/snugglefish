@@ -85,7 +85,7 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
     PyObject *index=NULL, *tmp;
 	int ngrams = 3;
 
-    static char *kwlist[] = {"index", "ngram_size", NULL};
+    static char *kwlist[] = {(char *) "index", (char *) "ngram_size", NULL};
 
     if (! PyArg_ParseTupleAndKeywords(args, kwds, "S|i", kwlist, &index, &ngrams)) {
         return -1; // ngram size optional
@@ -110,16 +110,16 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
 * Define members of pysnugglefish object.
 */
 static PyMemberDef pysnugglefish_members[] = {
-    {"index", T_OBJECT_EX, offsetof(pysnugglefish, index), 0,
-     "index name"},
-    {"file_list", T_OBJECT_EX, offsetof(pysnugglefish, file_list), 0,
-     "list of file names"},
-    {"ngram_size", T_INT, offsetof(pysnugglefish, ngram_size), 0,
-     "n-gram size"},
-    {"max_buffer", T_INT, offsetof(pysnugglefish, max_buffer), 0,
-     "max buffer size"},
-    {"max_files", T_INT, offsetof(pysnugglefish, max_files), 0,
-     "max files to use"},
+    {(char *) "index", T_OBJECT_EX, offsetof(pysnugglefish, index), 0,
+     (char *) "index name"},
+    {(char *) "file_list", T_OBJECT_EX, offsetof(pysnugglefish, file_list), 0,
+     (char *) "list of file names"},
+    {(char *) "ngram_size", T_INT, offsetof(pysnugglefish, ngram_size), 0,
+     (char *) "n-gram size"},
+    {(char *) "max_buffer", T_INT, offsetof(pysnugglefish, max_buffer), 0,
+     (char *) "max buffer size"},
+    {(char *) "max_files", T_INT, offsetof(pysnugglefish, max_files), 0,
+     (char *) "max files to use"},
     { NULL }  /* Sentinel */
 };
 
@@ -149,7 +149,7 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 */
 static PyObject * pysnugglefish_index(pysnugglefish * self) {
 	vector<string> files;
-	int ct = PyList_Size(self->file_list);
+	Py_ssize_t ct = PyList_Size(self->file_list);
 	int i;
 	for (i = 0; i < ct; i++) {
 		files.push_back(PyString_AsString(PyList_GetItem(self->file_list, i)));
@@ -309,7 +309,7 @@ PyMODINIT_FUNC initpysnugglefish(void) {
         return;
 	}
     
-    SnuggleError = PyErr_NewException("pysnugglefish.error", NULL, NULL);
+    SnuggleError = PyErr_NewException((char *) "pysnugglefish.error", NULL, NULL);
     Py_INCREF(SnuggleError);
     PyModule_AddObject(m, "error", SnuggleError);
     Py_INCREF(&pysnugglefish_Type);

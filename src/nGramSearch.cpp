@@ -27,12 +27,13 @@ SUCH DAMAGE.
 */
 
 
-#include "../include/nGramSearch.h"
+#include "nGramSearch.h"
 #include <iostream>
 #include <stdexcept>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 
@@ -103,7 +104,7 @@ bool nGramSearch::loadIndexFile(uint32_t id){
         throw runtime_error("Stat Index File");
     }
 
-    indexMmap = (uint8_t*) mmap(NULL, indexMmapSize, PROT_READ, MAP_SHARED, index_fd, 0);
+    indexMmap = (uint8_t*) mmap(NULL, (size_t) indexMmapSize, PROT_READ, MAP_SHARED, index_fd, 0);
 
     if(indexMmap == MAP_FAILED){
         cerr << "Error: " << strerror(errno) << endl;
@@ -139,7 +140,7 @@ bool nGramSearch::loadNGramFile(uint32_t id){
         throw runtime_error("Stat NGram File");
     }
 
-    nGramMmap = (uint8_t*) mmap(NULL, nGramMmapSize, PROT_READ, MAP_SHARED, ngram_fd, 0);
+    nGramMmap = (uint8_t*) mmap(NULL, (size_t) nGramMmapSize, PROT_READ, MAP_SHARED, ngram_fd, 0);
 
     if (nGramMmap == MAP_FAILED){
         cerr << "Error: " << strerror(errno) << endl;
@@ -153,12 +154,12 @@ bool nGramSearch::loadNGramFile(uint32_t id){
 
 
 bool nGramSearch::unloadNGramFile(){ 
-    munmap(nGramMmap, nGramMmapSize);
+    munmap(nGramMmap, (size_t) nGramMmapSize);
     return true;
 }
 
 bool nGramSearch::unloadIndexFile(){
-    munmap(indexMmap, indexMmapSize);
+    munmap(indexMmap, (size_t) indexMmapSize);
     return true;
 }
 
@@ -169,9 +170,9 @@ vector<uint64_t> nGramSearch::stringToNGrams(string searchString){
     uint64_t nGram;
     vector <uint64_t> ngrams;
 
-    for(uint64_t i = 0; i + ngramLength - 1 < searchString.length(); i++){
+    for(size_t i = 0; i + ngramLength - 1 < searchString.length(); i++){
         nGram = 0;
-        for(uint64_t j = 0; j < ngramLength; j++){
+        for(size_t j = 0; j < ngramLength; j++){
 	    // (1 << (8*j)) is equivalent to pow(256,j)
             nGram += (unsigned char)searchString[i+j] * (1 << (8*j));
         }

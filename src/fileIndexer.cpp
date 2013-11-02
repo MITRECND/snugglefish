@@ -27,11 +27,12 @@ SUCH DAMAGE.
 */
 
 
-#include "../include/fileIndexer.h"
+#include "fileIndexer.h"
 #include <iostream>
 #include <stdexcept>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
@@ -61,8 +62,7 @@ filesProcessed(0), verbose(true)
 // Takes in a file name, mmaps it, and creates a vector of ngrams
 // return: pointer to vector of ngrams
 vector<uint32_t>* fileIndexer::processFile(const char* fileName){
-    uint64_t bytesRead, number=0, fileSize;
-    unsigned char *buf;
+    uint64_t fileSize;
     int fd;
     struct stat st;
 
@@ -79,7 +79,7 @@ vector<uint32_t>* fileIndexer::processFile(const char* fileName){
 	return 0;
     }
 
-    uint8_t* filemmap = (uint8_t *) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fd, 0);
+    uint8_t *filemmap = (uint8_t *) mmap(NULL, (size_t) fileSize, PROT_READ, MAP_SHARED, fd, 0);
     if(filemmap == MAP_FAILED){
         cout << "error mapping " << fileName << " with errno: " << errno << endl;
     	return 0;
@@ -125,7 +125,7 @@ vector<uint32_t>* fileIndexer::processFile(const char* fileName){
         }
     }
 
-    munmap(filemmap, fileSize);
+    munmap(filemmap, (size_t) fileSize);
     return ngramList;
 }
 
@@ -138,7 +138,8 @@ vector<uint32_t>* fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSi
     map<uint32_t, bool> ngram_map;
 
     uint32_t nGram = 0;
-    uint32_t i, j, k;
+    uint32_t i, j;
+
     for(i = 0; ((i + this->ngramLength) - 1) < fileSize; i++){
         nGram = 0;
         for(j = 0; j < this->ngramLength; j++){
@@ -161,70 +162,18 @@ vector<uint32_t>* fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSi
     return ngramVector;
 }
 
-
-//TODO Remove this function after veriying it's no longer useful
-
-// Takes in a file name, mmaps it, and creates a array of booleans to containing
-// the file's Ngrams
-// return: array containing whether or not a ngram is contained in the file
-bool* fileIndexer::processFile(const char* fileName, int flag){
-    uint64_t bytesRead, number=0, fileSize;
-    unsigned char *buf;
-    int fd;
-    struct stat st;
-
-    fd = open(fileName, O_RDONLY);
-    if(fd == -1){
-        cout << "error opening " << fileName << " with errno: " << errno << std::endl;
-        return 0;
-    }
-
-    if (stat(fileName, &st) == 0)
-        fileSize = st.st_size;
-    else{
-        std::cout << "File size for file: " << fileName << " not found" << std::endl;
-	return 0;
-    }
-
-    uint8_t* filemmap = (uint8_t *) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fd, 0);
-    if(filemmap == MAP_FAILED){
-        cout << "error mapping " << fileName << " with errno: " << errno << endl;
-    	return 0;
-    }
-
-    close(fd);
-    bool* ngramList = new bool [this->maxNgram];
-    memset(ngramList, 0, this->maxNgram);
-
-    try{
-        if (this->verbose){
-            cout << "Adding file #" << this->filesProcessed << ": " << fileName << endl;
-        }
-
-        this->filesProcessed++;
-        processNgrams(filemmap, fileSize, ngramList);
-
-    } catch(std::exception &e){
-        cout << "Error processing ngrams: "<< e.what() << endl;
-    }
-
-    munmap(filemmap, fileSize);
-    return ngramList;
-}
-
-
 // Takes the file and creates ngrams from it
-bool* fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSize, bool ngramList[]){
+void fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSize, bool ngramList[]){
     //TODO update with byte array
     uint64_t nGram = 0;
-    uint64_t i, j, k;
+    uint64_t i, j;
     for(i = 0; ((i + this->ngramLength) - 1) < fileSize; i++){
         nGram = 0;
-	// creates an ngram using the formula buf[i] + buf[i+1]*256 
-	// + buf[i+2]*256*256
+       // creates an ngram using the formula buf[i] + buf[i+1]*256 
+       // + buf[i+2]*256*256
         for(j = 0; j < this->ngramLength; j++){
             // (1 <<(8*j)) is equivalent to pow(256,j)
-            nGram += (unsigned char)buf[i+j] * (1 << (8*j));
+           nGram += (unsigned char)buf[i+j] * (1 << (8*j));
         }
         if(nGram >= this->maxNgram){
             throw std::runtime_error("Ngram greater than mMaxNgram");
@@ -232,4 +181,5 @@ bool* fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSize, bool ngr
         ngramList[nGram] = 1;
     }
 
+    return;
 }

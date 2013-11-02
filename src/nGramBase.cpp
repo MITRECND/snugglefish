@@ -27,10 +27,13 @@ SUCH DAMAGE.
 */
 
 
-#include "../include/nGramBase.h"
+#include "nGramBase.h"
 #include <iostream>
 #include <stdexcept>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -59,7 +62,7 @@ nGramBase::nGramBase( uint32_t ngramLength, string indexFileName)
 
 
 
-    uint64_t pos;
+    size_t pos;
     string baseFileName = indexFileName;
     // Check to see if the index file ends with any of the extentions we use
     // And if so, remove them to get the base filename
