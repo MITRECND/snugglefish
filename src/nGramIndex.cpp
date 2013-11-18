@@ -365,7 +365,7 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     delete[] write_buffer;
 
     //Flush the index file
-    write(indexFile, index_buffer, (INDEX_ENTRY_SIZE) * maxNgram);
+    write(indexFile, index_buffer, (size_t) ((INDEX_ENTRY_SIZE) * maxNgram));
     delete[] index_buffer;
 
     cout << "Flushed " << bytes_flushed << " Bytes " << endl;
