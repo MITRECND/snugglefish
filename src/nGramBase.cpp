@@ -50,8 +50,7 @@ nGramBase::nGramBase( uint32_t ngramLength, string indexFileName)
 
     if(ngramLength == 3 || ngramLength == 4){
         this->ngramLength = ngramLength;
-        this->maxNgram = 1 << (8*ngramLength);// ~=pow(256, ngramLength);
-
+        this->maxNgram = (uint64_t) (1) << (8*ngramLength);
 
         this->numFilesProcessed = 0;
         this->numIndexFiles = 0;

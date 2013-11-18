@@ -50,7 +50,7 @@ filesProcessed(0), verbose(true)
 
     if(ngramLength == 3  || ngramLength == 4){
         this->ngramLength = ngramLength;
-        this->maxNgram = (1 << (8*ngramLength));
+        this->maxNgram = ((uint64_t) (1) << (8*ngramLength));
         this->pagesize = getpagesize();
     }
     else {
