@@ -36,7 +36,7 @@ To index, simply feed the pysnugglefish instance with configuration options, the
 		obj.ngram_size = 2 # defaults to 3
 		obj.max_buffer = 9001 # defaults to no maximum (0)
 		obj.max_files = 100000 # defaults to no maximum (0)
-		obj.make_index # create the index file
+		obj.make_index() # create the index file
 
 The snugglefish code that the module wraps will print out information about the process to the console.  
 
