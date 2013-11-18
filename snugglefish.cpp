@@ -154,8 +154,8 @@ int main(int argc, char *argv[]){
                         cout << "Invalid ngram size, please enter an integer" << endl;
                         return 0;
                     }
-                    if(ngramSize > 3 || ngramSize < 2){
-                        cout << "Ngram size must be 2 <= ngram size <= 3. Ngram size is " << ngramSize << endl;
+                    if(ngramSize < 3 || ngramSize > 4){
+                        cout << "Ngram size must be 3 or 4. Ngram size is " << ngramSize << endl;
                         return 0;
                     }
                     break;

@@ -146,7 +146,7 @@ vector<uint32_t>* fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSi
             nGram += (unsigned char)buf[i+j] * (1 << (8*j));
         }
         if(nGram >= this->maxNgram){
-            throw std::runtime_error("Ngram greater than mMaxNgram");
+            throw std::runtime_error("Ngram greater than maxNgram");
         }
         ngram_map.insert(pair<uint32_t,bool>(nGram, true));
     }
@@ -176,7 +176,7 @@ void fileIndexer::processNgrams(unsigned char* buf, uint64_t fileSize, bool ngra
            nGram += (unsigned char)buf[i+j] * (1 << (8*j));
         }
         if(nGram >= this->maxNgram){
-            throw std::runtime_error("Ngram greater than mMaxNgram");
+            throw std::runtime_error("Ngram greater than maxNgram");
         }
         ngramList[nGram] = 1;
     }
