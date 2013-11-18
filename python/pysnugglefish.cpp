@@ -91,8 +91,8 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
         return -1; // ngram size optional
 	}
 
-	if (ngrams != 2 && ngrams != 3) {
-	    PyErr_SetString(PyExc_TypeError, "N-Gram size must be set to 2 or 3.");
+	if (ngrams != 3 && ngrams != 4) {
+	    PyErr_SetString(PyExc_TypeError, "N-Gram size must be set to 3 or 4.");
 	    return -1;
 	}
     if (index) { // if index was provided, manage references and set
@@ -228,7 +228,7 @@ static int pysnugglefish_setattr(pysnugglefish *self, char *name, PyObject *valu
 	} else if (strcmp(name, "ngram_size") == 0 && value != NULL) {
 		int newval = 0;
 		if (PyArg_Parse(value, "i", &newval)) {
-			if (newval == 2 || newval == 3) {
+			if (newval == 3 || newval == 4) {
 				self->ngram_size = newval;
 	    		result = 0;
 			}

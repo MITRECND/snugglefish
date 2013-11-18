@@ -21,10 +21,10 @@ To execute snugglefish functions, create an interface through pysnugglefish:
 
 Or, you can specify the index file and the ngram size as init arguments.
 		
-		ngram_sz = 2
+		ngram_sz = 3
 		obj = pysnugglefish.init("/path/to/indexfile", ngram_sz)
 
-Ngram size must be either 2 or 3.
+Ngram size must be either 3 or 4.
 
 Indexing with PySnugglefish
 ===========================
@@ -33,7 +33,7 @@ To index, simply feed the pysnugglefish instance with configuration options, the
 
 		obj = pysnugglefish.init("/path/to/indexfile")
 		obj.file_list = ["/path/to/file1", "/path/to/file2"]
-		obj.ngram_size = 2 # defaults to 3
+		obj.ngram_size = 3 # defaults to 3
 		obj.max_buffer = 9001 # defaults to no maximum (0)
 		obj.max_files = 100000 # defaults to no maximum (0)
 		obj.make_index() # create the index file
@@ -46,7 +46,7 @@ The module facilitates searching a specified index.
 Again, provide configuration, then execute your search.
 
 		obj = pysnugglefish.init("/path/to/indexfile")
-		obj.ngram_size = 2 # better equal the ngram_size used to generate the index!
+		obj.ngram_size = 3 # better equal the ngram_size used to generate the index!
 		bitstring = "\x41\x42\x43"
 		files_found = obj.search(bitstring)
 		
