@@ -23,25 +23,27 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+CC=g++
+
 all: snugglefish
 
 snugglefish: snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o
-	g++ -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o  -o snugglefish
+	${CC} -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o  -o snugglefish
 
 snugglefish.o: snugglefish.cpp
-	g++ -Iinclude -g -c snugglefish.cpp
+	${CC} -Iinclude -g -c snugglefish.cpp
 
 nGramBase.o: src/nGramBase.cpp
-	g++ -Iinclude -g -c src/nGramBase.cpp
+	${CC} -Iinclude -g -c src/nGramBase.cpp
 
 nGramIndex.o: src/nGramIndex.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -c src/nGramIndex.cpp
+	${CC} -Iinclude -g -c src/nGramIndex.cpp
 
 nGramSearch.o: src/nGramSearch.cpp src/nGramBase.cpp
-	g++ -Iinclude -g -c src/nGramSearch.cpp
+	${CC} -Iinclude -g -c src/nGramSearch.cpp
 
 fileIndexer.o: src/fileIndexer.cpp
-	g++ -Iinclude -g -c src/fileIndexer.cpp
+	${CC} -Iinclude -g -c src/fileIndexer.cpp
 
 clean: 
 	rm -rf *.o snugglefish
