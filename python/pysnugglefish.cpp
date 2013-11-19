@@ -121,11 +121,18 @@ static PyMemberDef pysnugglefish_members[] = {
  */
 static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	char *searchString;
+	vector<string> found;
+
 	if (!PyArg_ParseTuple(args, "s", &searchString)) {
 		return NULL;
 	}
 
-	vector<string> found = search(PyString_AsString(self->index), searchString, self->ngram_size);
+	try {
+		found = search(PyString_AsString(self->index), searchString, self->ngram_size);
+	} catch (exception &e) {
+		PyErr_SetString(SnuggleError, e.what());
+		return NULL;
+	}
 
 	PyObject *ret = PyList_New(found.size());
 	for(int i = 0; i < found.size(); i++) {
