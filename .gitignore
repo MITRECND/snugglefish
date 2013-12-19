@@ -1,3 +1,4 @@
 snugglefish
 *.o
+*.swp
 python/build
