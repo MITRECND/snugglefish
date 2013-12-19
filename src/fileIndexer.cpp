@@ -44,7 +44,7 @@ SUCH DAMAGE.
 using namespace snugglefish;
 using namespace std;
 
-fileIndexer::fileIndexer(uint32_t ngramLength):
+fileIndexer::fileIndexer(uint8_t ngramLength):
 filesProcessed(0), verbose(true)
 {
 

@@ -41,7 +41,7 @@ namespace snugglefish {
         public:
             
             //Constructor -- only takes ngramLength
-            fileIndexer( uint32_t ngramLength );
+            fileIndexer(uint8_t ngramLength);
 
             //Processes the nGrams from a file -- returns an allocated array of bools
             //Calling function must cleanup
