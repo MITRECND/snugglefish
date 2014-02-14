@@ -35,7 +35,9 @@ SUCH DAMAGE.
 #include <string>
 #include <fstream>
 #include <stdint.h>
-
+#include "smFile.h"
+#include "indexSet.h"
+#include <utility>
 
 namespace snugglefish {
 
@@ -57,29 +59,19 @@ namespace snugglefish {
 
         private:
             //FUNCTIONS
-			
-            bool loadFileIdFile();
-            
-			
-            //Read Mode Functions
-            bool loadNGramFile(uint32_t id = 0);
-            bool loadIndexFile(uint32_t id = 0);
-            bool unloadNGramFile();
-            bool unloadIndexFile();
-            std::list<index_entry> orderNGrams(const std::vector<uint64_t>& nGramQuery);
+            std::list< std::pair<uint64_t, size_t> > orderNGrams(indexSet* index, const std::vector<uint64_t>& nGramQuery);
             //Alpha is just a placeholder name for this search type
             //I envision there will be multiple search types
-            void searchAlpha(std::list<index_entry> & queryList, std::list<ngram_t_fidtype>& matchedIds);
+            void searchAlpha(indexSet* index, std::list< std::pair<uint64_t,size_t> > & queryList, std::list<ngram_t_fidtype>& matchedIds);
 
 
 
             //Read Mode Variables
-            uint8_t* nGramMmap;
-            uint64_t nGramMmapSize;
-            uint8_t* indexMmap;
-            uint64_t indexMmapSize;
-            uint8_t* indexEntries;
+            smFile* masterFile;
+            uint32_t numIndexFiles;
+            uint32_t numFiles;
 
+            
  
 
     };

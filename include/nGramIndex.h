@@ -35,6 +35,8 @@ SUCH DAMAGE.
 #include <string>
 #include <fstream>
 #include <stdint.h>
+#include "smFile.h"
+#include "indexSet.h"
 
 #define BUFFER_NODE_SIZE        sizeof(ngram_t_fidtype) + 24 //24 is upper bound per node
 
@@ -80,22 +82,10 @@ namespace snugglefish {
             
             //Write Mode
             void addNGrams(std::vector<uint32_t>* nGramList, std::string filename);
-            void addNGrams(bool nGramList[], std::string filename, int flag);
+            //void addNGrams(bool nGramList[], std::string filename, int flag);
     
-            
-
-        protected:
-
         private:
-            //FUNCTIONS			
-            bool loadFileIdFile();
-			
             //Write Mode Functions
-            void createFiles();
-            bool createNGramFile();
-            bool createIndexFile(ngram_t_indexfcount num_files);
-            bool createFileIdFile();
-            void addNGram(uint64_t nGram, ngram_t_fidtype file_id);
             void flushAll();
             ngram_t_indexfcount flushFiles();
             void flushIndex(ngram_t_indexfcount num_files );
@@ -109,12 +99,12 @@ namespace snugglefish {
             uint64_t buffer_memory_usage; //how many bytes is the buffer storing (only file ids)
             std::vector< std::string > fileNameList;
             bool     flush;
-            uint32_t nGramFile;
-            uint32_t indexFile;
+
             uint32_t maxFiles;
 
+            smFile* masterFile;
 
-
+            uint64_t numFilesProcessed;
  
 
     };

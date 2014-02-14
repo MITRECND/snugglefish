@@ -36,17 +36,12 @@ SUCH DAMAGE.
 #include <fstream>
 #include <stdint.h>
 #include "common.h"
-
+#include "file.h"
+#include "indexSet.h"
+#include "smFile.h"
 
 namespace snugglefish {
 
-    //Storage container for index entries
-    //Due to padding we should typecast on the fly
-    //when we want to use this
-    struct index_entry{
-        uint64_t offset;
-        uint32_t num_files;
-    };
 
     //Class to keep track of nGram Index files
     class nGramBase
@@ -54,33 +49,13 @@ namespace snugglefish {
         public:
             
             nGramBase( uint32_t ngramLength, std::string indexFileName);
-            ~nGramBase();
-
             
         protected:
-			
-            //FUNCTIONS
-            //General Functions
-            bool notExists(); //Checks to see if files exist
-            bool loadFileIdFile(uint32_t filid_fd);
             uint16_t maxFileNameLength;
-
-			//VARIABLES
-            //General Variables
             std::string baseFileName;
-            std::string nGramFileName;
-            std::string indexFileName;
-            std::string fileIdFileName;
-            const uint32_t endian_check;
-            const uint8_t  version;
             uint8_t ngramLength; // the ngram size we're using
-            uint64_t maxNgram;
-            uint32_t numIndexFiles; //number of index files
-            ngram_t_fidtype numFilesProcessed;
-            uint32_t fileIdFile;
-			
-			
-		
+            uint64_t maxNgram; 
+            
 
         private:
             

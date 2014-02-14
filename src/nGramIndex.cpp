@@ -37,8 +37,6 @@ SUCH DAMAGE.
 #include <errno.h>
 #include <string.h>
 
-#include <libgen.h> //for dirname and basename()
-
 using namespace snugglefish;
 using namespace std;
 
@@ -57,124 +55,28 @@ nGramIndex::nGramIndex( uint32_t ngramLength, string indexFileName)
 		this->output_buffer[i].elements = new list<ngram_t_fidtype>;
 	}
 
-	if(notExists()){ //FileIdFile
-		createFiles();
-	}
-    
+    masterFile = new smFile(baseFileName, ngramLength);
 
-    
-    if(!loadFileIdFile()){
-        throw runtime_error("Error opening File Id File");
+    if (masterFile->exists()){
+        masterFile->open('w');
+    }else{ //Must create it
+        masterFile->create(maxFileNameLength);
     }
 
-   
+    numFilesProcessed = masterFile->getNumFiles();
 }
 
 nGramIndex::~nGramIndex(){
     
 	this->flushAll();
-	//should we bother properly cleaning up?
 	for(uint64_t i = 0; i < maxNgram; i++){
 		delete this->output_buffer[i].elements;
 	}
 	delete[] output_buffer;    
 
+    delete masterFile;
+
 }
-
-bool nGramIndex::loadFileIdFile(){
-    uint32_t filid_fd;
-    
-   
-	filid_fd = open(this->fileIdFileName.c_str(), O_RDWR);
-
-    if(filid_fd == -1){
-        return false;
-    }
-
-    return nGramBase::loadFileIdFile(filid_fd);
-}
-
-//Creates and opens an Ngram file
-//which is effectively an empty file with the right name
-bool nGramIndex::createNGramFile(){
-    uint32_t ngram_fd;
-    string filename = nGramFileName;
-
-    char number_string[FILE_NUM_BUFFER_SIZE];
-    snprintf(number_string, FILE_NUM_BUFFER_SIZE, FILE_NUM_SPRINTF_STRING, numIndexFiles);
-    filename = filename.append(number_string);
-
-    ngram_fd = open(filename.c_str(), O_RDWR | O_CREAT, FILE_MODE);
-
-    if(ngram_fd == -1){
-        cout << "Error Number: " << errno << endl;
-        return false;
-    }
-
-    nGramFile = ngram_fd;
-    return true; 
-}
-
-
-//Creates and opens an index file
-//Which only has the standard header written
-bool nGramIndex::createIndexFile(ngram_t_indexfcount num_files){
-    uint32_t index_fd;
-    
-    string filename = indexFileName;
-
-    char number_string[FILE_NUM_BUFFER_SIZE];
-    snprintf(number_string, FILE_NUM_BUFFER_SIZE, FILE_NUM_SPRINTF_STRING, numIndexFiles);
-    filename = filename.append(number_string);
-
-    index_fd = open(filename.c_str(), O_RDWR|O_CREAT, FILE_MODE);
-    if(index_fd == -1){
-        cout << "Error Number: " << errno << endl;
-        return false;
-    }
-
-    //Write out initial Header for Index File
-    write(index_fd, &endian_check, ENDIAN_CHECK_FIELD);
-    write(index_fd, &version, VERSION_FIELD);
-    write(index_fd, &ngramLength, NGRAM_SIZE_FIELD);
-    write(index_fd, &num_files, INDEX_HEADER_NUM_FILES_FIELD);
-    //Num files field written when flushing
-
-    indexFile = index_fd;
-    return true;
-    
-}
-
-
-//Creates then closes a new file id file
-//Should be loaded later
-bool nGramIndex::createFileIdFile(){
-    uint32_t filid_fd;
-    uint32_t four_byte_zero = 0;
-    uint64_t eight_byte_zero = 0;
-    filid_fd = open(fileIdFileName.c_str(), O_RDWR | O_CREAT , FILE_MODE);
-    if(filid_fd == -1){
-        cout << "Error Number: " << errno << endl;
-        return false;
-    }
-
-    write(filid_fd, &endian_check, ENDIAN_CHECK_FIELD);
-    write(filid_fd, &version, VERSION_FIELD);
-    write(filid_fd, &ngramLength, NGRAM_SIZE_FIELD);
-    write(filid_fd, &this->maxFileNameLength, MAX_FILENAME_LENGTH_FIELD);
-    write(filid_fd, &four_byte_zero, NUM_INDEX_FILES_FIELD); 
-    write(filid_fd, &eight_byte_zero, NUM_FILES_FIELD); 
-
-    close(filid_fd);
-
-    return true;
-}
-
-void nGramIndex::createFiles(){
-    cout << "Creating File ... " << endl;
-    createFileIdFile();
-}
-
 
 
 /*  NGram Related Functions */
@@ -189,8 +91,20 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
     ngram_t_fidtype file_id = numFilesProcessed++;
     fileNameList.push_back(filename);
 
+    // Insert ngram into the list, add the new node to the memory usage variable,
+    // and check if the maximum memory has been used, and if so, indicate that the
+    // nGrams should be flushed to disk
     for(uint32_t i = 0; i < nGramList->size(); i++){
-        addNGram((*nGramList)[i], file_id);
+        //addNGram((*nGramList)[i], file_id);
+        uint32_t nGram = (*nGramList)[i];
+        output_buffer[nGram].elements_size++;
+        output_buffer[nGram].elements->push_back(file_id);
+
+        buffer_memory_usage += BUFFER_NODE_SIZE; //Add size of node
+
+        if(buffer_memory_usage >= bufferMax){ 
+            flush = true;
+        }
     }
 
     //We cleanup the memory
@@ -210,6 +124,7 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
 
 }
 
+/*
 //Takes an array of bools that is of size 2^(ngram bits)
 void nGramIndex::addNGrams(bool nGramList[], string filename, int flag){
     //POSIX basename may modify argument so create a copy
@@ -244,52 +159,30 @@ void nGramIndex::addNGrams(bool nGramList[], string filename, int flag){
 
 
 }
+*/
 
-
-// Insert ngram into the list, add the new node to the memory usage variable,
-// and check if the maximum memory has been used, and if so, indicate that the
-// nGrams should be flushed to disk
-void nGramIndex::addNGram(uint64_t nGram, ngram_t_fidtype file_id){
-    output_buffer[nGram].elements_size++;
-    output_buffer[nGram].elements->push_back(file_id);
-
-    buffer_memory_usage += BUFFER_NODE_SIZE; //Add size of node
-
-    if(buffer_memory_usage >= bufferMax){ 
-        flush = true;
-    }
-}
 
 void nGramIndex::flushAll(){
-    cout<<"Flushing ... " << endl;
-    cout<<"\tCurrent Buffer Usage: " << buffer_memory_usage<< endl;
+    cout<<"Flushing ... " << endl 
+        <<"\tCurrent Buffer Usage: " << buffer_memory_usage<< endl;
+
     ngram_t_indexfcount num_files = flushFiles();
     flushIndex(num_files);
-    cout<<"\tAfter Flush: " << buffer_memory_usage << endl;
+
+    //cout<<"\tAfter Flush: " << buffer_memory_usage << endl;
 }
 
 // Flush the file names to the file id file
 ngram_t_indexfcount nGramIndex::flushFiles(){
     //Write FileNames to File ID file
     ngram_t_indexfcount num_files = (ngram_t_indexfcount) fileNameList.size();
-    char* fileNameBuffer = new char[maxFileNameLength * fileNameList.size()];
 
-    for(unsigned long i = 0; i < fileNameList.size(); i++){
-        strncpy(fileNameBuffer + (i * maxFileNameLength), fileNameList[i].c_str(), maxFileNameLength);
+    for(unsigned long i = 0; i < num_files; i++){
+        masterFile->addFileId(fileNameList[i].c_str());
     }
-
-    lseek(fileIdFile, 0, SEEK_END);
-    write(fileIdFile, fileNameBuffer, sizeof(char) * (maxFileNameLength * fileNameList.size()));
-
-    delete[] fileNameBuffer;
-
-    //Upate number of files
-    lseek(fileIdFile, FILID_NUM_FILES_OFFSET , SEEK_SET); 
-    write(fileIdFile, &numFilesProcessed, NUM_FILES_FIELD); 
 
     //Clear the vector
     fileNameList.clear();
-
 
     return num_files;
 }
@@ -299,85 +192,27 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     cout << "Flushing Index..." << endl;
 
     //Create the files
-    createIndexFile(num_files);   
-    createNGramFile();
-
+    indexSet* tIndex = new indexSet(baseFileName.c_str(), masterFile->getNumIndexFiles(), ngramLength);
+    tIndex->create(num_files);
 
     uint64_t bytes_flushed = 0;
-    uint64_t offset = 0;
 
-    //Write Buffer -- write out entires in chunks so writes aren't too small
-    uint64_t max_entries = WRITE_BUFFER_SIZE  / NUM_FILES_FIELD;
-    ngram_t_fidtype* write_buffer = new ngram_t_fidtype[max_entries];
-    size_t current_entries = 0;
+    for(uint32_t i = 0; i < maxNgram; i++){ //iterate through every ngram
+        bytes_flushed += output_buffer[i].elements_size * sizeof(ngram_t_fidtype);
+        tIndex->addNGrams(i, this->output_buffer[i].elements);
+        output_buffer[i].elements_size = 0;
 
-    //Index Buffer -- write it out in one big chunk
-    uint8_t* index_buffer = new uint8_t[(INDEX_ENTRY_SIZE) * maxNgram];  
+        if (output_buffer[i].elements->size() != 0)
+            cout << "Not Zero" << endl;
 
-    for(uint64_t i = 0; i < maxNgram; i++){ //iterate through every ngram
-
-        if(this->output_buffer[i].elements_size > 0){ //if it has any entries
-
-            //Is the buffer full enough?
-            if(current_entries + output_buffer[i].elements_size > max_entries){
-                //Write all that we buffered up
-                ssize_t written = write(nGramFile, write_buffer, current_entries * NUM_FILES_FIELD);
-                if(written == -1){
-                    cerr << "Error: " <<strerror(errno) << endl;
-                    throw runtime_error("Write buffer not written");
-                }
-                bytes_flushed += written;
-                current_entries = 0;
-            }
-
-            uint32_t counter = 0;
-            while(output_buffer[i].elements_size > 0){
-                counter++;
-                write_buffer[current_entries++] = output_buffer[i].elements->front();
-                output_buffer[i].elements->pop_front();
-                buffer_memory_usage -= BUFFER_NODE_SIZE;
-                output_buffer[i].elements_size--;
-            }
-
-            //Update Index Buffer
-            ngram_t_offset* offset_location = (ngram_t_offset*) (index_buffer + (i * (INDEX_ENTRY_SIZE)));
-            ngram_t_indexfcount* file_count_location = (ngram_t_indexfcount*) (index_buffer + (i * (INDEX_ENTRY_SIZE) + OFFSET_FIELD));
-            *offset_location = offset;
-            *file_count_location = counter;
-            
-
-            //Update the offset with the size of this ngram block
-            offset += (counter * NUM_FILES_FIELD);
-        }
-
+        
     }
 
-    //Flush anything left
-    if (current_entries > 0){
-        //Write all that we buffered up
-        ssize_t written = write(nGramFile, write_buffer, (size_t) (current_entries * NUM_FILES_FIELD));
-        if(written == -1){
-            cerr << "Error: " <<strerror(errno) << endl;
-            throw runtime_error("Write buffer not written");
-        }
-        bytes_flushed += written;
-    }
-    delete[] write_buffer;
-
-    //Flush the index file
-    write(indexFile, index_buffer, (size_t) ((INDEX_ENTRY_SIZE) * maxNgram));
-    delete[] index_buffer;
-
+    buffer_memory_usage = 0;
     cout << "Flushed " << bytes_flushed << " Bytes " << endl;
-    close(nGramFile);
-    close(indexFile);
 
     //Update filid with new value
-    numIndexFiles++;
-    lseek(fileIdFile, FILID_NUM_INDEX_OFFSET , SEEK_SET);
-    write(fileIdFile, &numIndexFiles, NUM_INDEX_FILES_FIELD);
+    masterFile->updateIndexFileCount(masterFile->getNumIndexFiles() + 1);
+    tIndex->close();
+    delete tIndex;
 }
-
-
-
-

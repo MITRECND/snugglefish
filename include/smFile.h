@@ -4,6 +4,7 @@
 
 #include "file.h"
 #include "common.h"
+#include <string>
 
 namespace snugglefish {
 
@@ -11,14 +12,22 @@ namespace snugglefish {
     {
 
         public:
-            smFile(const char* fileName, uint8_t nGramSize);
+            smFile(std::string fileBase, uint8_t nGramSize);
+            ~smFile();
 
             bool create(ngram_t_fnlength maxfnLength);        
             bool open(char readwrite);
 
+            bool flush();
+
             bool addFileId(const char* fileName);
             bool updateIndexFileCount(ngram_t_indexcount count);
             bool updateFileCount(ngram_t_fidtype count);
+
+            const ngram_t_indexcount getNumIndexFiles() { return numIndexFiles; }
+            const ngram_t_fidtype getNumFiles() { return numFiles; }
+
+            const char* getFilebyId(uint64_t id);
 
         private:
             //Index File header elements
@@ -28,6 +37,9 @@ namespace snugglefish {
             ngram_t_fnlength    maxFileNameLength;
             ngram_t_indexcount  numIndexFiles;
             ngram_t_fidtype     numFiles;
+
+
+            char*   fileBuffer;
 
     };
 

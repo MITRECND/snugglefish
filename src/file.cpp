@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <iostream>
+#include <errno.h>
 
 using namespace snugglefish;
 using namespace std;
@@ -28,7 +30,10 @@ file::file(const char* fileName, size_t buffersize){
 
 
 file::~file(){
-    this->close();
+    //File Descriptor is not zero
+    if(this->fd){
+        this->close();
+    }
     
     if (this->filename != NULL){
         free(this->filename);
@@ -42,30 +47,29 @@ file::~file(){
 }
 
 bool file::create(mode_t filemode){
-    //if fd != 0 some error
 
     if (this->bufferparam > 0){
         this->buffersize = this->bufferparam;
         this->buffer = (char*) malloc(buffersize);
     }
     this->fd = ::open(this->filename, O_RDWR | O_CREAT, filemode);
-    this->atend = true;
+    this->readonly = false;
 
     if (this->fd <= 0){
-        //Throw some error
+        cerr << "Unable to Create File: " << filename << " -- Error: " << strerror(errno) << endl;
+        throw runtime_error("Creating File");
     }
 
     return true;
 }
 
 bool file::open(char readwrite){
-    //if fd != 0 some error
-
     switch (readwrite){
         case 'r':
         {    
             this->fd = ::open(this->filename, O_RDONLY);
             this->size = this->get_size();
+            this->readonly = true;
             break;
         }
         case 'w':
@@ -75,30 +79,34 @@ bool file::open(char readwrite){
                 this->buffer = (char*) malloc(buffersize);
             }
             this->fd = ::open(this->filename, O_RDWR);
-            this->atend = true;
+            this->readonly = false;
             break;
         }
         default:
-            //Throw some error
+            throw runtime_error("Unrecognized read/write mode");
             break;
     }
 
     if (this->fd <= 0){
-        //Throw some error
+        cerr << "Error Opening File: " << this->filename << " -- Error: " << strerror(errno) << endl;
+        throw runtime_error("Opening File");
     }
 
     return true;
 }
 
 uint8_t* file::mmap(){
-
-    //Open the file first
+    //Open the file first 
     if (this->fd == 0)
         this->open('r');
+
+    if (!this->size)
+        return NULL;
 
     this->mmapFile = (uint8_t*) ::mmap(NULL, this->size, PROT_READ, MAP_SHARED, this->fd, 0);
 
     if(this->mmapFile == MAP_FAILED){
+        cerr << "Error Loading Map for File : " << this->filename<< " -- Error: " << strerror(errno) << endl;
         throw runtime_error("Loading Map");
     }
 
@@ -107,7 +115,10 @@ uint8_t* file::mmap(){
 }
 
 bool file::close(){
-    //Flush any data that's been buffered
+    if (!this->fd){ // already closed?
+        return true;
+    }
+
     this->flush(); 
 
     //Close the mmap if opened
@@ -117,7 +128,7 @@ bool file::close(){
         this->size = 0;
     }
 
-
+    //Free the write buffer if allocated
     if (this->buffer){
         free(this->buffer);
         this->buffer = NULL;
@@ -126,7 +137,8 @@ bool file::close(){
 
     int32_t retval = ::close(this->fd);
     if(retval){//non zero
-        //Throw some error
+        cerr << "Error Closing File: " << this->filename << " -- Error: " << strerror(errno) << endl;
+        throw runtime_error("Closing File");
     }
 
     this->fd = 0;
@@ -135,18 +147,24 @@ bool file::close(){
 
 }
 
-bool file::flush(){
-    if (this->bufferused){
-        //Seek to the end of the file first
-        if (!this->atend){
-            lseek(this->fd, 0, SEEK_END);
-            this->atend = true;
+bool file::real_write(int fd, uint8_t* data, size_t length){
+        ssize_t written = ::write(fd, data, length); 
+        if (written == -1){//TODO what if partial write?
+            cerr << "Unable to write to file: " << this->filename << " -- Error: " << strerror(errno) << endl;
+            throw runtime_error("Write Error");
         }
 
-        ssize_t written = ::write(this->fd, this->buffer, this->bufferused); 
-        if (written == -1){
-            //Some Error
-        }
+    return true;
+}
+
+bool file::flush(){
+    if(this->readonly){
+        return true;
+    }
+
+    if (this->bufferused){
+        lseek(this->fd, 0, SEEK_END);
+        this->real_write(this->fd, (uint8_t*) this->buffer, this->bufferused * sizeof(char));
         this->bufferused = 0;
     }
 
@@ -155,28 +173,25 @@ bool file::flush(){
 
 
 bool file::write(uint8_t * data, size_t length){
-    //Technically, I don't need to do this * sizeof(uint8_t) business, but whatever
-    if((this->bufferused + (length * sizeof(uint8_t))) > this->buffersize) {
+    if (this->readonly){
+        throw runtime_error("Write command on read-only file");
+    }
+
+    if((this->bufferused + (length)) > this->buffersize) {
         this->flush();
 
         if (length < this->buffersize){
-            memcpy(this->buffer, data, length * sizeof(uint8_t));
-            this->bufferused = length * sizeof(uint8_t);
-        }else{ //Data being passed in is larger than buffer, write out directly
+            memcpy(this->buffer, data, length);
+            this->bufferused = length;
+        }else{  
+            //Data being passed in is larger than buffer, write out directly
             //Seek to the end of the file first
-            if (!this->atend){
-                lseek(this->fd, 0, SEEK_END);
-                this->atend = true;
-            }
-
-            ssize_t written = ::write(this->fd, data, length * sizeof(uint8_t));
-            if (written == -1){
-                //Some Error
-            }
+            lseek(this->fd, 0, SEEK_END);
+            this->real_write(this->fd, data, length);
         }
     }else{ // just buffer it up
-        memcpy(this->buffer + this->bufferused, data, length * sizeof(uint8_t));
-        this->bufferused += length * sizeof(uint8_t);
+        memcpy(this->buffer + this->bufferused, data, length);
+        this->bufferused += length;
     }
 
     return true;
@@ -184,14 +199,14 @@ bool file::write(uint8_t * data, size_t length){
 
 
 bool file::write_at(int32_t location, uint8_t * data, size_t length){
-    this->atend = false;
-
-    lseek(this->fd, location, SEEK_SET);
-
-    ssize_t written = ::write(this->fd, data, length * sizeof(uint8_t));
-    if (written == -1){
-        //Some Error
+    if (this->readonly){
+        throw runtime_error("Write command on reaodnly file");
     }
+
+    //Flush before writing at locations
+    flush();
+    lseek(this->fd, location, SEEK_SET);
+    this->real_write(this->fd, data, length * sizeof(uint8_t));
 
     return true;
 

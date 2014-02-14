@@ -6,37 +6,50 @@
 #include "common.h"
 #include <string>
 #include <vector>
+#include <list>
 
 namespace snugglefish {
+
+    //Storage container for index entries
+    //Due to padding we should typecast on the fly
+    //when we want to use this
+    struct index_entry{
+        uint64_t offset;
+        uint32_t num_files;
+    };
 
     class indexSet 
     {
 
         public:
-            indexSet(const char* fileBase, uint8_t nGramSize);
+            indexSet(const char* fileBase, uint32_t count, uint8_t nGramSize);
             ~indexSet();
 
             bool create(ngram_t_numfiles nFiles = 0);
-            bool addNGrams(uint8_t* data, size_t length);
+            bool addNGrams(uint32_t ngram, std::list<ngram_t_fidtype> *files);
             bool updateNumFiles(ngram_t_numfiles count);
-            bool addIndexData(uint8_t* data, size_t length);
 
             //Opens and mmaps both the Index and NGram File
             bool open();
 
-            //Returns mmap'd loation of given ngram
-            uint8_t* getNGrams(uint64_t ngram, size_t* count);
+            bool close();
 
-            //Takes a list of NGrams and returns a list in ascending order
-            //nGrams with zero entries will be removed
-            std::vector<uint64_t> getOrderedNGrams(std::vector<uint64_t> nGrams);
+            //Get number of files with given ngram
+            size_t getNGramCount(uint64_t ngram);
+
+            //Returns mmap'd loation of given ngram
+            ngram_t_fidtype* getNGrams(uint64_t ngram, size_t* count);
 
         private:
+            bool addIndexData(uint64_t offset, uint32_t nFiles);
+
+
             file* indexFile;
             file* nGramFile;
 
             uint8_t* indexMap;
             uint8_t* nGramMap;
+            uint8_t* indexEntries;
 
             std::string fileBase;
 
@@ -47,6 +60,9 @@ namespace snugglefish {
             ngram_t_version     version;
             ngram_t_size        ngramLength;
             ngram_t_numfiles    numFiles;
+
+            uint32_t count;
+            uint64_t offset;
 
     };
 

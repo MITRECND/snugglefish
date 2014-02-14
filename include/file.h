@@ -93,10 +93,12 @@ namespace snugglefish {
             //Does file exist
             const bool exists();
             
+    
+        protected:
+            char* filename;
+            bool readonly;
 
         private:
-            char* filename;
-            bool atend;  //Is the write pointer at the end of the file (SEEK_END)?
             int32_t fd;  //File Descriptor
             uint8_t* mmapFile;
             size_t  size; //Size of File -- used for mmap purposes
@@ -104,6 +106,9 @@ namespace snugglefish {
             size_t buffersize;
             size_t bufferused;
             size_t bufferparam;
+
+
+            bool real_write(int fd, uint8_t* data, size_t length);
 
     };
     

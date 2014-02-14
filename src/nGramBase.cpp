@@ -46,14 +46,11 @@ using namespace std;
 
 
 nGramBase::nGramBase( uint32_t ngramLength, string indexFileName)
-    :endian_check(ENDIAN_CHECK), version(VERSION) {
+    {
 
     if(ngramLength == 3 || ngramLength == 4){
         this->ngramLength = ngramLength;
         this->maxNgram = (uint64_t) (1) << (8*ngramLength);
-
-        this->numFilesProcessed = 0;
-        this->numIndexFiles = 0;
     }
     else {
         throw std::runtime_error("Ngram len must be 3 or 4");
@@ -83,69 +80,5 @@ nGramBase::nGramBase( uint32_t ngramLength, string indexFileName)
 
 
     this->baseFileName = baseFileName;
-
-    this->nGramFileName = baseFileName;
-    this->nGramFileName.append(NGRAM_FILE_EXTENSION);
-
-    this->indexFileName = baseFileName;
-    this->indexFileName.append(INDEX_FILE_EXTENSION);
-
-    this->fileIdFileName = baseFileName;
-    this->fileIdFileName.append(FILEID_FILE_EXTENSION);
-
-    
-
-
-}
-
-nGramBase::~nGramBase(){
-    
-
-}
-
-
-/* File Status Related Functions */
-bool nGramBase::notExists(){
-    struct stat st;
-    if(stat(this->fileIdFileName.c_str(), &st) == 0){
-        //file exists 
-        return false;
-    }else{
-        return true;
-    }
-
-}
-
-
-
-bool nGramBase::loadFileIdFile(uint32_t filid_fd){
-   
-    
-    ngram_t_endian endian_check = 0;
-    ngram_t_version version = 0;
-    ngram_t_size ngram_size = 0;
-
-    read(filid_fd, &endian_check, ENDIAN_CHECK_FIELD);
-
-    if (endian_check != this->endian_check){
-        //endian matches
-        cout << "Endian MisMatch" <<endl;
-        return false;
-    }
-
-    read(filid_fd, &version, VERSION_FIELD);
-    read(filid_fd, &ngram_size, NGRAM_SIZE_FIELD);
-    if(ngram_size != ngramLength){
-        cout << "nGram Size MisMatch"<< endl;
-        return false;
-    }
-
-    read(filid_fd, &maxFileNameLength, MAX_FILENAME_LENGTH_FIELD); 
-    read(filid_fd, &numIndexFiles, NUM_INDEX_FILES_FIELD);
-    read(filid_fd, &numFilesProcessed, NUM_FILES_FIELD);
-
-    this->fileIdFile = filid_fd;
-
-    return true;
 }
 

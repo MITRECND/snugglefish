@@ -45,20 +45,13 @@ namespace snugglefish {
 
             //Processes the nGrams from a file -- returns an allocated array of bools
             //Calling function must cleanup
-            bool* processFile(const char* fileName, int flag); //flag is only there so we can overload 'processFile'
             std::vector<uint32_t>* processFile(const char* fileName);
-
-            //Sets verbosity on process
-            void setVerbose(bool verbose);
-
-        protected:
 
         private:
             std::vector<uint32_t>* processNgrams(unsigned char *buf, uint64_t fileSize);
             void processNgrams(unsigned char *buf, uint64_t fileSize, bool ngramList[]);
 
             uint64_t filesProcessed;
-            bool verbose;
             uint32_t ngramLength;
             uint64_t maxNgram;
             uint32_t pagesize;

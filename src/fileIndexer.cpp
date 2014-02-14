@@ -41,11 +41,13 @@ SUCH DAMAGE.
 #include <map>
 
 
+#include "file.h"
+
 using namespace snugglefish;
 using namespace std;
 
 fileIndexer::fileIndexer(uint8_t ngramLength):
-filesProcessed(0), verbose(true)
+filesProcessed(0)
 {
 
     if(ngramLength == 3  || ngramLength == 4){
@@ -62,36 +64,16 @@ filesProcessed(0), verbose(true)
 // Takes in a file name, mmaps it, and creates a vector of ngrams
 // return: pointer to vector of ngrams
 vector<uint32_t>* fileIndexer::processFile(const char* fileName){
-    uint64_t fileSize;
-    int fd;
-    struct stat st;
-
-    fd = open(fileName, O_RDONLY);
-    if(fd == -1){
-        cout << "error opening " << fileName << " with errno: " << errno << std::endl;
-        return 0;
-    }
-
-    if (stat(fileName, &st) == 0)
-        fileSize = st.st_size;
-    else{
-        std::cout << "File size for file: " << fileName << " not found" << std::endl;
-	return 0;
-    }
-
-    uint8_t *filemmap = (uint8_t *) mmap(NULL, (size_t) fileSize, PROT_READ, MAP_SHARED, fd, 0);
-    if(filemmap == MAP_FAILED){
-        cout << "error mapping " << fileName << " with errno: " << errno << endl;
-    	return 0;
-    }
-
-    close(fd);
 
     vector<uint32_t>* ngramList = 0;
+    file* inputFile = new file(fileName);
+    size_t fileSize = inputFile->get_size();
+    uint8_t* inputFileMap = inputFile->mmap();
 
-    if (this->verbose){
-        cout << "Adding file #" << this->filesProcessed << ": " << fileName << endl;
-    }
+    if (!fileSize)
+        return NULL; 
+
+
     this->filesProcessed++;
 
     //It is much faster to just use an array that holds a boolean
@@ -103,7 +85,7 @@ vector<uint32_t>* fileIndexer::processFile(const char* fileName){
         bool* bngramList = new bool[this->maxNgram]();
 
         try{
-            processNgrams(filemmap,fileSize,bngramList);
+            processNgrams(inputFileMap, fileSize, bngramList);
 
             for(uint32_t k = 0; k < this->maxNgram; k++){
                 if(bngramList[k]){
@@ -119,13 +101,15 @@ vector<uint32_t>* fileIndexer::processFile(const char* fileName){
 
     }else{ //ngramLength == 4
         try {
-            ngramList = processNgrams(filemmap, fileSize);
+            ngramList = processNgrams(inputFileMap, fileSize);
         } catch(exception &e){
             cout << "Error processing ngrams: " << e.what() << endl;
         }
     }
 
-    munmap(filemmap, (size_t) fileSize);
+    inputFile->close();
+    delete inputFile;
+
     return ngramList;
 }
 
