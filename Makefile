@@ -28,7 +28,7 @@ CC=g++
 all: snugglefish
 
 snugglefish: snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o files
-	${CC} -rdynamic snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o file.o indexSet.o smFile.o  -o snugglefish
+	${CC} -rdynamic -pthread snugglefish.o nGramBase.o nGramSearch.o nGramIndex.o fileIndexer.o file.o indexSet.o smFile.o  -o snugglefish
 
 snugglefish.o: snugglefish.cpp
 	${CC} -Iinclude -g -c snugglefish.cpp

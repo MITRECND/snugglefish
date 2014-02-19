@@ -29,6 +29,7 @@ SUCH DAMAGE.
 
 #include "nGramSearch.h"
 #include <iostream>
+#include <queue>
 #include <stdexcept>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -37,6 +38,7 @@ SUCH DAMAGE.
 #include <errno.h>
 #include <string.h>
 #include <utility>
+#include <pthread.h>
 #include "indexSet.h"
 
 using namespace snugglefish;
@@ -44,7 +46,23 @@ using namespace std;
 
 
 nGramSearch::nGramSearch( uint32_t ngramLength, string indexFileName)
-    :nGramBase(ngramLength, indexFileName) {
+    :nGramBase(ngramLength, indexFileName),numThreads(1) {
+
+    masterFile = new smFile(baseFileName, ngramLength);
+
+    if (!masterFile->exists()){
+        //some error
+    }else{
+        masterFile->open('r');
+    }
+
+
+    numIndexFiles = masterFile->getNumIndexFiles();
+    numFiles = masterFile->getNumFiles();
+}
+
+nGramSearch::nGramSearch( uint32_t ngramLength, string indexFileName, uint32_t threads)
+    :nGramBase(ngramLength, indexFileName),numThreads(threads) {
 
     masterFile = new smFile(baseFileName, ngramLength);
 
@@ -65,9 +83,10 @@ nGramSearch::~nGramSearch(){
 }
 
 
-vector<uint64_t> nGramSearch::stringToNGrams(string searchString){
+vector<uint64_t>* nGramSearch::stringToNGrams(string searchString){
     uint64_t nGram;
-    vector <uint64_t> ngrams;
+    vector <uint64_t>* ngrams = new vector<uint64_t>;
+
 
     for(size_t i = 0; i + ngramLength - 1 < searchString.length(); i++){
         nGram = 0;
@@ -75,25 +94,83 @@ vector<uint64_t> nGramSearch::stringToNGrams(string searchString){
 	    // (1 << (8*j)) is equivalent to pow(256,j)
             nGram += (unsigned char)searchString[i+j] * (1 << (8*j));
         }
-        ngrams.push_back(nGram);
+        ngrams->push_back(nGram);
     }
 
     return ngrams;
 }
 
 
-vector<string> nGramSearch::searchNGrams(vector<uint64_t> nGramQuery){
-    vector<string> matchedFiles;
+vector<string>* nGramSearch::searchNGrams(vector<uint64_t> nGramQuery){
+    vector<string>* matchedFiles = new vector<string>;
+    pthread_t * threads;
+    thread_data* tdata;
+    void* status;
 
-    //Go through each index fileset
-    for(uint32_t i = 0; i < numIndexFiles; i++){
-        indexSet* tIndex = new indexSet(baseFileName.c_str(), i, ngramLength);
+    tdata = new thread_data();
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    pthread_mutex_init(&(tdata->queueMutex), NULL);
+    pthread_mutex_init(&(tdata->smFileMutex), NULL);
+    pthread_mutex_init(&(tdata->mfMutex), NULL);
+
+    tdata->ngramLength = ngramLength;
+    tdata->queue = 0;
+    tdata->maximumIndex = numIndexFiles;
+
+    tdata->masterFile = (this->masterFile);
+    tdata->matchedFiles = matchedFiles;
+    tdata->baseFileName = &baseFileName;
+    tdata->nGramQuery = &(nGramQuery);
+
+    threads = (pthread_t*) malloc(numThreads * sizeof(pthread_t));
+
+    //Create the threads
+    for(uint32_t i = 0; i < numThreads; i++){
+        pthread_create(& threads[i], &attr, searchNGramThread, (void*) (tdata));
+    }
+    
+    //Join on them
+    for(uint32_t i = 0; i < numThreads; i++){
+        pthread_join(threads[i], &status);
+    }
+
+    pthread_mutex_destroy(&(tdata->queueMutex));
+    pthread_mutex_destroy(&(tdata->smFileMutex));
+    pthread_mutex_destroy(&(tdata->mfMutex));
+
+    free(threads);
+    delete tdata;
+    masterFile->close();
+    return matchedFiles;
+
+}
+
+void* nGramSearch::searchNGramThread(void* input){
+
+
+    thread_data* tdata = (thread_data*) input;
+
+    while(1){
+        pthread_mutex_lock(& tdata->queueMutex);
+        if (tdata->queue >= tdata->maximumIndex){
+            pthread_mutex_unlock(& tdata->queueMutex);
+            break;
+        }
+
+        uint32_t i = tdata->queue++;
+        pthread_mutex_unlock(& tdata->queueMutex);
+
+        indexSet* tIndex = new indexSet(tdata->baseFileName->c_str(), i, tdata->ngramLength);
         tIndex->open();
 
         //Get ordered list of NGrams
-	    // In ascending order by number of files that contain that ngram
+        // In ascending order by number of files that contain that ngram
         //list<index_entry> queryList = orderNGrams(nGramQuery);
-        list< pair<uint64_t,size_t> > queryList = orderNGrams(tIndex, nGramQuery);
+        list< pair<uint64_t,size_t> > queryList = orderNGrams(tIndex, *(tdata->nGramQuery));
 
         list<ngram_t_fidtype> matchedIds;
         //Get list of File Ids that match NGrams
@@ -102,21 +179,20 @@ vector<string> nGramSearch::searchNGrams(vector<uint64_t> nGramQuery){
         //Convert File IDs to filenames
         for(list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
                 ft != matchedIds.end(); ft++){
-            string matched_filename = masterFile->getFilebyId(*ft);
-            matchedFiles.push_back(matched_filename);
+
+            pthread_mutex_lock(& tdata->smFileMutex);
+            string matched_filename = tdata->masterFile->getFilebyId(*ft);
+            pthread_mutex_unlock(& tdata->smFileMutex);
+
+            pthread_mutex_lock(& tdata->mfMutex);
+            tdata->matchedFiles->push_back(matched_filename);
+            pthread_mutex_unlock(& tdata->mfMutex);
         }
-
-
 
         tIndex->close();
         delete tIndex;
     }
-
-    masterFile->close();
-    return matchedFiles;
-
 }
-
 
 list< pair<uint64_t, size_t> > nGramSearch::orderNGrams(indexSet* index, const vector<uint64_t> & nGramQuery){
     bool nomatch = false;

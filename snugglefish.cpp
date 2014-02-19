@@ -32,7 +32,6 @@ SUCH DAMAGE.
 // Allows for the indexing and searching of a large amount of samples in a short 
 // period of time.
 
-#include <nGramBase.h>
 #include <nGramSearch.h>
 #include <nGramIndex.h>
 #include <fileIndexer.h>
@@ -67,7 +66,9 @@ using namespace snugglefish;
 #define MAX_FILES_OPTION_SHORT 'm'
 #define NODE_BUFFER_OPTION_LONG "node_bound"
 #define NODE_BUFFER_OPTION_SHORT 'b'
-#define SHORT_OPTIONS_STRING "n:hsio:f:m:b:"
+#define THREADS_OPTION_LONG "threads"
+#define THREADS_OPTION_SHORT 't'
+#define SHORT_OPTIONS_STRING "n:hsio:f:m:b:t:"
 
 
 
@@ -107,6 +108,7 @@ int main(int argc, char *argv[]){
     uint32_t ngramSize = 3;
     uint32_t max_files = 0;
     uint64_t max_buffer = 0;
+    uint32_t threads = 0;
 
     signal(SIGSEGV, handler); 
 
@@ -121,14 +123,33 @@ int main(int argc, char *argv[]){
         {NGRAM_SIZE_OPTION_LONG, required_argument, 0, NGRAM_SIZE_OPTION_SHORT},
         {HELP_OPTION_LONG, no_argument, 0, HELP_OPTION_SHORT},
         {MAX_FILES_OPTION_LONG, required_argument, 0, MAX_FILES_OPTION_SHORT},
+        {THREADS_OPTION_LONG, required_argument, 0, THREADS_OPTION_SHORT},
         {0,0,0,0}
     };
     bool indexFlag = false, searchFlag = false;
+
+    // Default threads to the number of cpus
+    threads = cpu_count();
+
     // loop over all of the options
     while ((c = getopt_long(argc, argv, SHORT_OPTIONS_STRING, long_options, &option_index)) != -1){
         // check to see if a single character or long option came through
         switch (c){
             // short option 't'
+            case THREADS_OPTION_SHORT:
+                {
+                    istringstream tss(optarg);
+                    uint32_t thr = 0;
+
+                    if(!(tss >> thr)){
+                        cout << "Invalid number of threads, please enter an integer" << endl;
+                        return 0;
+                    }else{
+                        threads = thr;
+                    }
+
+                    break;
+                }
             case SEARCH_OPTION_SHORT:
                 searchFlag = true;
                 break;
@@ -244,10 +265,11 @@ int main(int argc, char *argv[]){
 	    if (searchString.size() < ngramSize){
 	        cout << "Search string size is smaller than Ngram size, the search string must be greater than or equal to the ngram size" << endl;
 	    } else {
-			vector<string> found = search(indexFileName, searchString, ngramSize);
-			for(uint32_t i = 0; i < found.size(); i++){
-       			cout << found[i] << endl;
+			vector<string>* found = search(indexFileName, searchString, ngramSize, threads);
+			for(uint32_t i = 0; i < found->size(); i++){
+       			cout << (*found)[i] << endl;
    			}
+            delete found;
 		}
     } else{
         printHelp();
@@ -267,6 +289,7 @@ void printHelp(){
     cout << "-b, --node_bound       Maximum node buffer memory size before flushing" << endl;
     cout << "-n, --ngramsize        The size of Ngram to use (default is 3)" << endl;
     cout << "-h, --help             This help screen" << endl;
+    cout << "-t, --threads          Number of search threads to spawn (default is #cpus)" << endl;
     cout << "Examples:" << endl;
     cout << "Index: snugglefish [-n ngramsize]  -i -o <index filename> <files to index>" << endl;
     cout << "If no file names are given on the commandline, the stdin will be used" << endl;
@@ -300,9 +323,12 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
     }
 }
 
-vector<string> search(string indexFileName, string searchString, uint32_t ngramSize){
-	vector<string> ret;
-	nGramSearch searcher(ngramSize, indexFileName);
-	ret = searcher.searchNGrams(searcher.stringToNGrams(searchString));
+vector<string>* search(string indexFileName, string searchString, uint32_t ngramSize, uint32_t threads){
+	vector<string>* ret;
+	nGramSearch searcher(ngramSize, indexFileName, threads);
+    vector<uint64_t>* ngrams = searcher.stringToNGrams(searchString);
+	ret = searcher.searchNGrams(*ngrams);
+
+    delete ngrams;
     return ret;
 }

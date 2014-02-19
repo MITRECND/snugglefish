@@ -43,6 +43,6 @@ extern "C" {
 }
 #endif
 
-std::vector<std::string> search(std::string indexFileName, std::string searchString, uint32_t ngramSize);
+std::vector<std::string>* search(std::string indexFileName, std::string searchString, uint32_t ngramSize, uint32_t threads);
     
 #endif

@@ -35,11 +35,28 @@ SUCH DAMAGE.
 #include <string>
 #include <fstream>
 #include <stdint.h>
+#include <utility>
+#include <pthread.h>
+#include <queue>
 #include "smFile.h"
 #include "indexSet.h"
-#include <utility>
 
 namespace snugglefish {
+
+    typedef struct _thread_data{
+        uint32_t queue;
+        uint32_t maximumIndex;
+        uint32_t ngramLength;
+
+        smFile* masterFile;
+        std::vector<std::string>* matchedFiles;
+        std::string* baseFileName;
+        std::vector<uint64_t>* nGramQuery;
+
+        pthread_mutex_t queueMutex;
+        pthread_mutex_t smFileMutex; 
+        pthread_mutex_t mfMutex;
+    } thread_data;
 
 
     //Class to keep track of nGram Index files
@@ -48,22 +65,26 @@ namespace snugglefish {
         public:
             
             nGramSearch( uint32_t ngramLength, std::string indexFileName);
+            nGramSearch( uint32_t ngramLength, std::string indexFileName, uint32_t threads);
             ~nGramSearch();
 
 
             //Read Mode
-            std::vector<std::string> searchNGrams(std::vector<uint64_t> nGramQuery);
-            std::vector<uint64_t> stringToNGrams(std::string searchString);
+            std::vector<std::string>* searchNGrams(std::vector<uint64_t> nGramQuery);
+            std::vector<uint64_t>* stringToNGrams(std::string searchString);
 
         protected:
 
         private:
             //FUNCTIONS
-            std::list< std::pair<uint64_t, size_t> > orderNGrams(indexSet* index, const std::vector<uint64_t>& nGramQuery);
+            static std::list< std::pair<uint64_t, size_t> > orderNGrams(indexSet* index, const std::vector<uint64_t>& nGramQuery);
             //Alpha is just a placeholder name for this search type
             //I envision there will be multiple search types
-            void searchAlpha(indexSet* index, std::list< std::pair<uint64_t,size_t> > & queryList, std::list<ngram_t_fidtype>& matchedIds);
+            static void searchAlpha(indexSet* index, std::list< std::pair<uint64_t,size_t> > & queryList, std::list<ngram_t_fidtype>& matchedIds);
+            static void* searchNGramThread(void* input);
 
+
+            uint32_t numThreads;
 
 
             //Read Mode Variables

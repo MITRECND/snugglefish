@@ -121,7 +121,7 @@ static PyMemberDef pysnugglefish_members[] = {
  */
 static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	char *searchString;
-	vector<string> found;
+	vector<string>* found;
 
 	if (!PyArg_ParseTuple(args, "s", &searchString)) {
 		return NULL;
@@ -136,8 +136,9 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 
 	PyObject *ret = PyList_New(found.size());
 	for(int i = 0; i < found.size(); i++) {
-		PyList_SetItem(ret, i, Py_BuildValue("s", found[i].c_str()));
+		PyList_SetItem(ret, i, Py_BuildValue("s", (*found)[i].c_str()));
 	}
+    delete found;
 	return ret;
 }
 
