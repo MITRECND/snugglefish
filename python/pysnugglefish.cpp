@@ -122,20 +122,26 @@ static PyMemberDef pysnugglefish_members[] = {
 static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	char *searchString;
 	vector<string>* found;
+	long procs;
 
 	if (!PyArg_ParseTuple(args, "s", &searchString)) {
 		return NULL;
 	}
 
 	try {
-		found = search(PyString_AsString(self->index), searchString, self->ngram_size);
+		//This only works on some *nixes TODO figure out which systems don't support this call
+		procs = sysconf(_SC_NPROCESSORS_ONLN);
+		if (procs < 1){
+			procs = 1;
+		}
+		found = search(PyString_AsString(self->index), searchString, self->ngram_size, (uint32_t) procs);
 	} catch (exception &e) {
 		PyErr_SetString(SnuggleError, e.what());
 		return NULL;
 	}
 
-	PyObject *ret = PyList_New(found.size());
-	for(int i = 0; i < found.size(); i++) {
+	PyObject *ret = PyList_New(found->size());
+	for(uint i = 0; i < found->size(); i++) {
 		PyList_SetItem(ret, i, Py_BuildValue("s", (*found)[i].c_str()));
 	}
     delete found;
