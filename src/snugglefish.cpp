@@ -47,6 +47,9 @@ SUCH DAMAGE.
 #include <unistd.h>
 #include <cstring>
 
+#include <utility>
+#include <pthread.h>
+
 using namespace std;
 using namespace snugglefish;
 
@@ -254,7 +257,7 @@ int main(int argc, char *argv[]){
             }
         }
         //Eventually options should be sent as a structure
-        make_index(indexFileName, fileList, ngramSize, max_files, max_buffer);
+        make_index(indexFileName, fileList, ngramSize, max_files, max_buffer, threads);
     } else if(searchFlag) {
         // Get the string to search for
 		if (optind < argc) {
@@ -299,7 +302,58 @@ void printHelp(){
 
 }
 
-void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer){
+void* indexerThread(void* input){
+
+    mi_data* midata = (mi_data*) input;
+    nGramIndex* ngramindex = (nGramIndex*) midata->ngramindex;
+    fileIndexer indexer(midata->ngramSize);
+
+    while(1){
+        pthread_mutex_lock(& midata->filesMutex);
+        if (midata->queue >= midata->fileList->size()){
+            pthread_mutex_unlock(& midata->filesMutex);
+            break;
+        }
+        uint32_t i = midata->queue++; 
+        pthread_mutex_unlock(& midata->filesMutex); 
+
+        try{
+            vector<uint32_t>* processedFile = indexer.processFile((*(midata->fileList))[i].c_str());
+            if(processedFile != 0){
+                pthread_mutex_lock(& midata->nGramIndexMutex);
+                ngramindex->addNGrams(processedFile, (*(midata->fileList))[i]);
+                pthread_mutex_unlock(& midata->nGramIndexMutex);
+            }
+        }catch(exception& e){
+            cout << "Error in thread:" << e.what() << endl;
+            handler(SIGSEGV);
+        }
+
+    }
+}
+
+void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer, uint32_t threads){
+
+    pthread_t* indexers;
+    mi_data* midata;
+    void* status;
+
+
+    midata = new mi_data;
+    indexers = (pthread_t*) malloc(threads * sizeof(pthread_t));
+
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    pthread_mutex_init(& (midata->filesMutex), NULL);
+    pthread_mutex_init(& (midata->nGramIndexMutex), NULL);
+
+    midata->fileList = & fileNames;
+    midata->ngramSize = ngramSize;
+    midata->queue = 0;
+
     try{
         nGramIndex ngramindex(ngramSize, indexFileName);
         if (max_files > 0){
@@ -309,19 +363,29 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
         if (max_buffer > 0){
             ngramindex.setmaxBufferSize(max_buffer);
         }
-        fileIndexer indexer1(ngramSize);
 
-        for(uint32_t i = 0; i < fileNames.size(); i++){
-            vector<uint32_t>* processedFile = indexer1.processFile(fileNames[i].c_str());
-            if(processedFile != 0)
-                ngramindex.addNGrams(processedFile, fileNames[i]);
+        midata->ngramindex = &ngramindex;
+
+        for(uint32_t i = 0; i < threads; i++){
+            pthread_create(& indexers[i], & attr, indexerThread, (void*) midata);
         }
 
+        for(uint32_t i = 0; i < threads; i++){
+            pthread_join(indexers[i], &status);
+        }
     } catch (exception& e){
         cout << "Error:" << e.what() << endl;
         handler(SIGSEGV);
     }
+
+
+    pthread_mutex_destroy(&(midata->filesMutex));
+    pthread_mutex_destroy(&(midata->nGramIndexMutex));
+
+    delete midata;
+    free(indexers);
 }
+
 
 vector<string>* search(string indexFileName, string searchString, uint32_t ngramSize, uint32_t threads){
 	vector<string>* ret;
