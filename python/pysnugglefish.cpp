@@ -155,12 +155,24 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
  */
 static PyObject * pysnugglefish_index(pysnugglefish * self) {
 	vector<string> files;
+    long procs;
 	Py_ssize_t ct = PyList_Size(self->file_list);
 	int i;
 	for (i = 0; i < ct; i++) {
 		files.push_back(PyString_AsString(PyList_GetItem(self->file_list, i)));
 	}
-	make_index(PyString_AsString(self->index), files, self->ngram_size, self->max_files, self->max_buffer);
+
+    try {
+		//This only works on some *nixes TODO figure out which systems don't support this call
+		procs = sysconf(_SC_NPROCESSORS_ONLN);
+		if (procs < 1){
+			procs = 1;
+		}
+	make_index(PyString_AsString(self->index), files, self->ngram_size, self->max_files, self->max_buffer, (uint32_t) procs);
+    } catch (exception &e){
+		PyErr_SetString(SnuggleError, e.what());
+		return NULL;
+    }
 	Py_INCREF(Py_None);
 	return Py_None;
 }
