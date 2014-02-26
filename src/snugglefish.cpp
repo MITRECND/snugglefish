@@ -65,14 +65,11 @@ using namespace snugglefish;
 #define OUTPUT_OPTION_LONG "output"
 #define FILE_OPTION_SHORT 'f'
 #define FILE_OPTION_LONG "file"
-#define MAX_FILES_OPTION_LONG "max_files"
-#define MAX_FILES_OPTION_SHORT 'm'
 #define NODE_BUFFER_OPTION_LONG "node_bound"
 #define NODE_BUFFER_OPTION_SHORT 'b'
 #define THREADS_OPTION_LONG "threads"
 #define THREADS_OPTION_SHORT 't'
-#define SHORT_OPTIONS_STRING "n:hsio:f:m:b:t:"
-
+#define SHORT_OPTIONS_STRING "n:hsio:f:b:t:"
 
 
 uint32_t cpu_count(){
@@ -125,7 +122,6 @@ int main(int argc, char *argv[]){
         {OUTPUT_OPTION_LONG, required_argument, 0, OUTPUT_OPTION_SHORT},
         {NGRAM_SIZE_OPTION_LONG, required_argument, 0, NGRAM_SIZE_OPTION_SHORT},
         {HELP_OPTION_LONG, no_argument, 0, HELP_OPTION_SHORT},
-        {MAX_FILES_OPTION_LONG, required_argument, 0, MAX_FILES_OPTION_SHORT},
         {THREADS_OPTION_LONG, required_argument, 0, THREADS_OPTION_SHORT},
         {0,0,0,0}
     };
@@ -185,22 +181,6 @@ int main(int argc, char *argv[]){
                     break;
                 }
 
-            case MAX_FILES_OPTION_SHORT:
-                {
-                    istringstream ss2(optarg);
-                    uint32_t tmax_files  = 1;
-
-                    if(!(ss2 >> tmax_files)){
-                        cout << "Invalid maximum number of files, please enter an integer" << endl;
-                        return 0;
-                    }
-
-                    if (tmax_files == 0){
-                        max_files = 0xFFFFFFFF; //uint32_t max
-                    }
-
-                    break;
-                }
             case NODE_BUFFER_OPTION_SHORT:
                 {
                     istringstream ss(optarg);
@@ -288,7 +268,6 @@ void printHelp(){
     cout << "-s, --search           Search Operation, requires -f, and search string" << endl;
     cout << "-o, --output           Specifies the output file for indexing, equivalent to -f" << endl;
     cout << "-f, --file             Index file to search, equivalent to -o" << endl;
-    cout << "-m, --max_files        Maximum number of files to process before flushing" << endl;
     cout << "-b, --node_bound       Maximum node buffer memory size before flushing" << endl;
     cout << "-n, --ngramsize        The size of Ngram to use (default is 3)" << endl;
     cout << "-h, --help             This help screen" << endl;
@@ -300,6 +279,26 @@ void printHelp(){
     cout << "If no string is given, it can be entered on the command line" << endl;
 
 
+}
+
+
+void printStats(nGramIndex* indexer, uint64_t processed, uint64_t listsize){
+    uint64_t total;
+    uint64_t session;
+    uint64_t indexes;
+    bool flushing;
+    indexer->getStats(total, session, indexes, flushing);
+
+    uint64_t percent = ((double) processed / listsize) * 100;
+
+    cerr << "\r";
+    cerr << "Processed: " << percent << "% -- " << processed << "/" << listsize;
+
+    if(flushing){
+        cerr << " (Flushing ... )"; 
+    }else{
+        cerr << "                "; 
+    }
 }
 
 void* indexerThread(void* input){
@@ -356,10 +355,6 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
 
     try{
         nGramIndex ngramindex(ngramSize, indexFileName);
-        if (max_files > 0){
-            ngramindex.setmaxFiles(max_files);
-        }
-
         if (max_buffer > 0){
             ngramindex.setmaxBufferSize(max_buffer);
         }
@@ -370,9 +365,25 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
             pthread_create(& indexers[i], & attr, indexerThread, (void*) midata);
         }
 
+        while(1){
+            //Usage of mutex shouldn't matter
+            if (midata->queue >= fileNames.size()){
+                break;
+            }
+            
+            printStats(&ngramindex, midata->queue, fileNames.size());
+            sleep(1);
+        }
+
+
         for(uint32_t i = 0; i < threads; i++){
             pthread_join(indexers[i], &status);
         }
+
+        //Print some final stats
+        printStats(&ngramindex, midata->queue, fileNames.size());
+        cerr << endl;
+
     } catch (exception& e){
         cout << "Error:" << e.what() << endl;
         handler(SIGSEGV);

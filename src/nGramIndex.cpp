@@ -43,7 +43,7 @@ using namespace std;
 
 nGramIndex::nGramIndex( uint32_t ngramLength, string indexFileName)
     :nGramBase(ngramLength, indexFileName), bufferMax(MAX_BUFFER_SIZE),
-    buffer_memory_usage(0), flush(false), maxFiles(MAX_FILES) {
+    buffer_memory_usage(0), flush(false), flushing(false) {
 
 
     this->maxFileNameLength = DEFAULT_MAX_FILENAME_SIZE;
@@ -64,6 +64,7 @@ nGramIndex::nGramIndex( uint32_t ngramLength, string indexFileName)
     }
 
     numFilesProcessed = masterFile->getNumFiles();
+    numSessionFilesProcessed = 0;
 }
 
 nGramIndex::~nGramIndex(){
@@ -87,7 +88,6 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
     filename = basename(temp_filename);
     delete[] temp_filename;
 
-
     ngram_t_fidtype file_id = numFilesProcessed++;
     fileNameList.push_back(filename);
 
@@ -95,7 +95,6 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
     // and check if the maximum memory has been used, and if so, indicate that the
     // nGrams should be flushed to disk
     for(uint32_t i = 0; i < nGramList->size(); i++){
-        //addNGram((*nGramList)[i], file_id);
         uint32_t nGram = (*nGramList)[i];
         output_buffer[nGram].elements_size++;
         output_buffer[nGram].elements->push_back(file_id);
@@ -109,12 +108,6 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
 
     //We cleanup the memory
     delete nGramList;
-
-
-    //Maximum number of files per index
-    if(fileNameList.size() > maxFiles){
-        flush = true;
-    }
 
     if (flush){
         flushAll();
@@ -163,19 +156,30 @@ void nGramIndex::addNGrams(bool nGramList[], string filename, int flag){
 
 
 void nGramIndex::flushAll(){
-    cout<<"Flushing ... " << endl 
-        <<"\tCurrent Buffer Usage: " << buffer_memory_usage<< endl;
+    //cout<<"Flushing ... " << endl 
+    //    <<"\tCurrent Buffer Usage: " << buffer_memory_usage<< endl;
 
-    ngram_t_indexfcount num_files = flushFiles();
-    flushIndex(num_files);
+    flushing = true;
+    if(fileNameList.size()){
+        ngram_t_indexfcount num_files = fileNameList.size();
+        //By updating the master file last, this set can be queried
+        //while creating a new index set
+        flushIndex(num_files);
+        flushMaster();
 
-    //cout<<"\tAfter Flush: " << buffer_memory_usage << endl;
+        numSessionFilesProcessed += num_files;
+    }
+    flushing = false;
 }
 
-// Flush the file names to the file id file
-ngram_t_indexfcount nGramIndex::flushFiles(){
+// Flush the file names and update the number of index files
+void nGramIndex::flushMaster(){
     //Write FileNames to File ID file
     ngram_t_indexfcount num_files = (ngram_t_indexfcount) fileNameList.size();
+
+    if (!num_files){
+        return;
+    }
 
     for(unsigned long i = 0; i < num_files; i++){
         masterFile->addFileId(fileNameList[i].c_str());
@@ -184,13 +188,12 @@ ngram_t_indexfcount nGramIndex::flushFiles(){
     //Clear the vector
     fileNameList.clear();
 
-    return num_files;
+    //Update filid with new value
+    masterFile->updateIndexFileCount(masterFile->getNumIndexFiles() + 1);
 }
 
 // Flush the ngrams to the index files
 void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
-    cout << "Flushing Index..." << endl;
-
     //Create the files
     indexSet* tIndex = new indexSet(baseFileName.c_str(), masterFile->getNumIndexFiles(), ngramLength);
     tIndex->create(num_files);
@@ -204,15 +207,19 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
 
         if (output_buffer[i].elements->size() != 0)
             cout << "Not Zero" << endl;
-
-        
     }
 
     buffer_memory_usage = 0;
-    cout << "Flushed " << bytes_flushed << " Bytes " << endl;
+    //cout << "Wrote" << bytes_flushed << " Bytes " << endl;
 
-    //Update filid with new value
-    masterFile->updateIndexFileCount(masterFile->getNumIndexFiles() + 1);
     tIndex->close();
     delete tIndex;
+}
+
+
+void nGramIndex::getStats(uint64_t& totalFiles, uint64_t& sessionFiles, uint64_t& indexFiles, bool& flushing){
+    totalFiles = masterFile->getNumFiles();
+    sessionFiles = numSessionFilesProcessed;
+    indexFiles = masterFile->getNumIndexFiles();
+    flushing = this->flushing;
 }

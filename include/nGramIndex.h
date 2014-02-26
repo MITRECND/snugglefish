@@ -42,7 +42,6 @@ SUCH DAMAGE.
 
 //Index File Constants
 #define DEFAULT_MAX_FILENAME_SIZE                   65 //64 characters + null terminator
-#define MAX_FILES                                   2000
 #define TWO_GB                                      2147483648 //1024 * 1024 * 1204 * 2 
 #define FOUR_GB                                     TWO_GB * 2
 #define MAX_BUFFER_SIZE                             FOUR_GB 
@@ -71,40 +70,39 @@ namespace snugglefish {
             ~nGramIndex();
 
             //Accessors
-            const uint32_t getmaxFiles(){return this->maxFiles;}
             const uint32_t getmaxFileNameLength(){return this->maxFileNameLength;}   
             const uint64_t getmaxBufferSize(){return this->bufferMax;}
 
             //Setters
-            void setmaxFiles(uint32_t maxFiles){ this->maxFiles = maxFiles;}
             void setmaxFileNameLength(uint32_t length){ this->maxFileNameLength = length; }
             void setmaxBufferSize(uint64_t size){this->bufferMax = size;}
             
             //Write Mode
             void addNGrams(std::vector<uint32_t>* nGramList, std::string filename);
             //void addNGrams(bool nGramList[], std::string filename, int flag);
+
+            void getStats(uint64_t & totalFiles, uint64_t& sessionFiles, uint64_t& indexFiles, bool& flushing);
     
         private:
             //Write Mode Functions
             void flushAll();
-            ngram_t_indexfcount flushFiles();
+            void flushMaster();
             void flushIndex(ngram_t_indexfcount num_files );
 
            
-            //VARIABLES
-
             //Write Mode Variables
             uint64_t bufferMax;
             buffer_element* output_buffer;
             uint64_t buffer_memory_usage; //how many bytes is the buffer storing (only file ids)
             std::vector< std::string > fileNameList;
-            bool     flush;
+            bool flush;
+            bool flushing;
 
-            uint32_t maxFiles;
 
             smFile* masterFile;
 
             uint64_t numFilesProcessed;
+            uint64_t numSessionFilesProcessed; //How many files have been processed this session
  
 
     };
