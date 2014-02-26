@@ -70,8 +70,10 @@ vector<uint32_t>* fileIndexer::processFile(const char* fileName){
     size_t fileSize = inputFile->get_size();
     uint8_t* inputFileMap = inputFile->mmap();
 
-    if (!fileSize)
-        return NULL; 
+    if (!fileSize){
+        delete inputFile;
+        return NULL;
+    } 
 
 
     this->filesProcessed++;
