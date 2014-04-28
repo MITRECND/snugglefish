@@ -36,6 +36,7 @@ SUCH DAMAGE.
 #include <sys/mman.h>
 #include <errno.h>
 #include <string.h>
+#include <libgen.h>
 
 using namespace snugglefish;
 using namespace std;
