@@ -117,48 +117,7 @@ void nGramIndex::addNGrams(vector<uint32_t>* nGramList, string filename){
 
 }
 
-/*
-//Takes an array of bools that is of size 2^(ngram bits)
-void nGramIndex::addNGrams(bool nGramList[], string filename, int flag){
-    //POSIX basename may modify argument so create a copy
-    char* temp_filename = new char[filename.length() + 1];
-    strncpy(temp_filename, filename.c_str(), filename.length() + 1);
-    filename = basename(temp_filename);
-    delete[] temp_filename;
-
-
-    ngram_t_fidtype file_id = numFilesProcessed++;
-    fileNameList.push_back(filename);
-
-    for(uint64_t i = 0; i < maxNgram; i++){
-        if (nGramList[i]){
-            addNGram(i, file_id);
-        }
-    }
-
-    //We cleanup the memory
-    delete[] nGramList;
-
-
-    //Maximum number of files per index
-    if(fileNameList.size() > maxFiles){
-        flush = true;
-    }
-
-    if (flush){
-        flushAll();
-        flush = false;
-    }
-
-
-}
-*/
-
-
 void nGramIndex::flushAll(){
-    //cout<<"Flushing ... " << endl 
-    //    <<"\tCurrent Buffer Usage: " << buffer_memory_usage<< endl;
-
     flushing = true;
     if(fileNameList.size()){
         ngram_t_indexfcount num_files = fileNameList.size();
@@ -210,7 +169,6 @@ void nGramIndex::flushIndex(ngram_t_indexfcount num_files){
     }
 
     buffer_memory_usage = 0;
-    //cout << "Wrote" << bytes_flushed << " Bytes " << endl;
 
     tIndex->close();
     delete tIndex;
