@@ -54,14 +54,14 @@ namespace snugglefish {
             indexSet(const char* fileBase, uint32_t count, uint8_t nGramSize);
             ~indexSet();
 
-            bool create(ngram_t_numfiles nFiles = 0);
-            bool addNGrams(uint32_t ngram, std::list<ngram_t_fidtype> *files);
-            bool updateNumFiles(ngram_t_numfiles count);
+            void create(ngram_t_numfiles nFiles = 0);
+            void addNGrams(uint32_t ngram, std::list<ngram_t_fidtype> *files);
+            void updateNumFiles(ngram_t_numfiles count);
 
             //Opens and mmaps both the Index and NGram File
-            bool open();
+            void open();
 
-            bool close();
+            void close();
 
             //Get number of files with given ngram
             size_t getNGramCount(uint64_t ngram);
@@ -70,7 +70,7 @@ namespace snugglefish {
             ngram_t_fidtype* getNGrams(uint64_t ngram, size_t* count);
 
         private:
-            bool addIndexData(uint64_t offset, uint32_t nFiles);
+            void addIndexData(uint64_t offset, uint32_t nFiles);
 
 
             file* indexFile;

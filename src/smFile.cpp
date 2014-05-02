@@ -62,7 +62,7 @@ bool smFile::flush(){
 
 }
 
-bool smFile::create(ngram_t_fnlength maxfnLength){
+void smFile::create(ngram_t_fnlength maxfnLength){
     if (this->exists()){
         cerr << "Unable to create file: " << this->filename << " -- Already Exists" << endl;
         throw runtime_error("Creating File");
@@ -90,7 +90,7 @@ bool smFile::create(ngram_t_fnlength maxfnLength){
 
 }
 
-bool smFile::open(char readwrite){
+void smFile::open(char readwrite){
     file::open(readwrite);
 
     ngram_t_size ngramL;
@@ -117,7 +117,7 @@ bool smFile::open(char readwrite){
 }
 
 
-bool smFile::addFileId(const char * fileName){
+void smFile::addFileId(const char * fileName){
     strncpy(fileBuffer, fileName, maxFileNameLength);
     write((uint8_t*) fileBuffer, maxFileNameLength * sizeof(char));
 
@@ -130,13 +130,7 @@ const char* smFile::getFilebyId(uint64_t id){
     return fileBuffer;
 }
 
-bool smFile::updateIndexFileCount(ngram_t_indexcount count){
+void smFile::updateIndexFileCount(ngram_t_indexcount count){
     write_at((int32_t) FILID_NUM_INDEX_OFFSET, (uint8_t*) &count, (size_t) NUM_INDEX_FILES_FIELD); 
     numIndexFiles = count; 
 }
-
-bool smFile::updateFileCount(ngram_t_fidtype count){
-    //This is delayed until flush() is called
-    numFiles = count;
-}
-
