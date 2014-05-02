@@ -302,7 +302,6 @@ void printStats(nGramIndex* indexer, uint64_t processed, uint64_t listsize){
 }
 
 void* indexerThread(void* input){
-
     mi_data* midata = (mi_data*) input;
     nGramIndex* ngramindex = (nGramIndex*) midata->ngramindex;
     fileIndexer indexer(midata->ngramSize);
@@ -327,8 +326,8 @@ void* indexerThread(void* input){
             cout << "Error in thread:" << e.what() << endl;
             handler(SIGSEGV);
         }
-
     }
+    return 0;
 }
 
 void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramSize, uint32_t max_files, uint64_t max_buffer, uint32_t threads){
