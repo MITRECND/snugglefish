@@ -192,6 +192,8 @@ void* nGramSearch::searchNGramThread(void* input){
         tIndex->close();
         delete tIndex;
     }
+
+    return NULL;
 }
 
 list< pair<uint64_t, size_t> > nGramSearch::orderNGrams(indexSet* index, const vector<uint64_t> & nGramQuery){
