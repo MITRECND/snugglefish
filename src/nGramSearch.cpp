@@ -172,9 +172,8 @@ void* nGramSearch::searchNGramThread(void* input){
         //list<index_entry> queryList = orderNGrams(nGramQuery);
         list< pair<uint64_t,size_t> > queryList = orderNGrams(tIndex, *(tdata->nGramQuery));
 
-        list<ngram_t_fidtype> matchedIds;
         //Get list of File Ids that match NGrams
-        searchAlpha((indexSet*) tIndex, queryList, matchedIds);
+        list<ngram_t_fidtype> matchedIds = searchAlpha((indexSet*) tIndex, queryList);
 
         //Convert File IDs to filenames
         for(list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
@@ -237,17 +236,18 @@ list< pair<uint64_t, size_t> > nGramSearch::orderNGrams(indexSet* index, const v
 
 
 // Takes the list of sorted fids, and puts the common fids into matchedIds
-void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &queryList, list<ngram_t_fidtype> &matchedIds){
+list<ngram_t_fidtype> nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &queryList){
+    list<ngram_t_fidtype> *matchedIds = new list<ngram_t_fidtype>;
 
     if(queryList.size() == 0){
-        return;
+        return *matchedIds;
     }
     // this gets the ngram list for the first file, and places them 
     // into the matchedIds list
     ngram_t_numfiles count = 0;
     ngram_t_fidtype* ngrams = index->getNGrams((uint64_t) queryList.front().first, (size_t*) &count);
     for (ngram_t_numfiles j = 0; j < count; j++){
-        matchedIds.push_back(ngrams[j]);
+        matchedIds->push_back(ngrams[j]);
     }
         
     //Dont need the front element anymore so get rid of it
@@ -262,8 +262,8 @@ void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &qu
         ngram_t_fidtype* ngrams = index->getNGrams((uint64_t) (*it).first, (size_t*) &ngram_elements);
         uint32_t ngram_index = 0;
 
-        list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
-        while(ft != matchedIds.end()){
+        list<ngram_t_fidtype>::iterator ft = matchedIds->begin();
+        while(ft != matchedIds->end()){
             bool found = false;
             // Checks each element of the next fid array for
             // the current fid in matchedIds
@@ -282,7 +282,7 @@ void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &qu
             }
 
             if(!found){
-                ft = matchedIds.erase(ft);
+                ft = matchedIds->erase(ft);
             }else{
                 // ft++ is only needed if erase isn't called as 
                 // erase moves the iterator ahead
@@ -290,4 +290,5 @@ void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &qu
             }
         }
     }
+    return *matchedIds;
 }
