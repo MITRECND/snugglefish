@@ -132,15 +132,14 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 
 	try {
 		//This only works on some *nixes
-        // TODO figure out which systems don't support this call
+		// TODO figure out which systems don't support this call
 		procs = sysconf(_SC_NPROCESSORS_ONLN);
 		if (procs < 1){
 			procs = 1;
 		}
 		snugglefish::nGramSearch searcher(self->ngram_size, PyString_AsString(self->index), (uint32_t) procs);
 		vector<uint64_t> *ngrams = searcher.stringToNGrams(searchString);
-        found = searcher.searchNGrams(*ngrams);
-		//found = search(PyString_AsString(self->index), searchString, self->ngram_size, (uint32_t) procs);
+		found = searcher.searchNGrams(*ngrams);
 	} catch (exception &e) {
 		PyErr_SetString(SnuggleError, e.what());
 		return NULL;
