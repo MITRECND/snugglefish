@@ -28,7 +28,9 @@ SUCH DAMAGE.
 #include <stdio.h>
 #include <string>
 #include <vector>
-#include "../include/snugglefish.h"
+#include "nGramSearch.h"
+#include "nGramIndex.h"
+#include "fileindexer.h"
 
 using namespace std;
 
@@ -121,7 +123,7 @@ static PyMemberDef pysnugglefish_members[] = {
  */
 static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	char *searchString;
-	vector<string>* found;
+	vector<string> *found;
 	long procs;
 
 	if (!PyArg_ParseTuple(args, "s", &searchString)) {
@@ -129,22 +131,26 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	}
 
 	try {
-		//This only works on some *nixes TODO figure out which systems don't support this call
+		//This only works on some *nixes
+        // TODO figure out which systems don't support this call
 		procs = sysconf(_SC_NPROCESSORS_ONLN);
 		if (procs < 1){
 			procs = 1;
 		}
-		found = search(PyString_AsString(self->index), searchString, self->ngram_size, (uint32_t) procs);
+		snugglefish::nGramSearch searcher(self->ngram_size, PyString_AsString(self->index), (uint32_t) procs);
+		vector<uint64_t> *ngrams = searcher.stringToNGrams(searchString);
+        found = searcher.searchNGrams(*ngrams);
+		//found = search(PyString_AsString(self->index), searchString, self->ngram_size, (uint32_t) procs);
 	} catch (exception &e) {
 		PyErr_SetString(SnuggleError, e.what());
 		return NULL;
 	}
 
 	PyObject *ret = PyList_New(found->size());
-	for(uint i = 0; i < found->size(); i++) {
+	for(size_t i = 0; i < found->size(); i++) {
 		PyList_SetItem(ret, i, Py_BuildValue("s", (*found)[i].c_str()));
 	}
-    delete found;
+	delete found;
 	return ret;
 }
 
@@ -155,24 +161,40 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
  */
 static PyObject * pysnugglefish_index(pysnugglefish * self) {
 	vector<string> files;
-    long procs;
+	//long procs;
 	Py_ssize_t ct = PyList_Size(self->file_list);
 	int i;
+
+	//This only works on some *nixes
+	// TODO figure out which systems don't support this call
+	/*
+	 * Indexing is single threaded for now, figure out how to do
+	 * this properly later.
+	 *
+	 * -- WXS
+	 */
+#if 0
+	procs = sysconf(_SC_NPROCESSORS_ONLN);
+	if (procs < 1){
+		procs = 1;
+	}
+#endif
+
 	for (i = 0; i < ct; i++) {
 		files.push_back(PyString_AsString(PyList_GetItem(self->file_list, i)));
-	}
-
-    try {
-		//This only works on some *nixes TODO figure out which systems don't support this call
-		procs = sysconf(_SC_NPROCESSORS_ONLN);
-		if (procs < 1){
-			procs = 1;
+		try {
+			snugglefish::nGramIndex ngramindex(self->ngram_size, PyString_AsString(self->index));
+			ngramindex.setmaxBufferSize(self->max_buffer);
+			snugglefish::fileIndexer indexer(self->ngram_size);
+			vector<uint32_t> *processedFile = indexer.processFile(PyString_AsString(PyList_GetItem(self->file_list, i)));
+			if (processedFile != 0) {
+				ngramindex.addNGrams(processedFile, PyString_AsString(PyList_GetItem(self->file_list, i)));
+			}
+		} catch (exception &e){
+			PyErr_SetString(SnuggleError, e.what());
+			return NULL;
 		}
-	make_index(PyString_AsString(self->index), files, self->ngram_size, self->max_files, self->max_buffer, (uint32_t) procs);
-    } catch (exception &e){
-		PyErr_SetString(SnuggleError, e.what());
-		return NULL;
-    }
+	}
 	Py_INCREF(Py_None);
 	return Py_None;
 }

@@ -9,7 +9,7 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,14 +25,23 @@
 
 from distutils.core import setup, Extension
 
-INCLUDE_DIRS  = ['/usr/local/include', '/opt/local/include', '/usr/include', '../include']
-LIBRARY_DIRS  = ['/usr/lib', '/usr/local/lib']
+INCLUDE_DIRS  = [ '/usr/local/include',
+                  '/opt/local/include',
+                  '/usr/include',
+                  '../include' ]
+LIBRARY_DIRS  = [ '/usr/lib',
+                  '/usr/local/lib' ]
 
 # the c++ extension module
 extension_mod = Extension("pysnugglefish",
-                          sources=["../src/fileIndexer.cpp", "../src/nGramBase.cpp", "../src/nGramIndex.cpp",
-                          "../src/nGramSearch.cpp", "../src/snugglefish.cpp", "../src/file.cpp", 
-                          "../src/indexSet.cpp", "../src/smFile.cpp", "pysnugglefish.cpp"],
+                          sources=[ "../src/fileIndexer.cpp",
+                                    "../src/nGramBase.cpp",
+                                    "../src/nGramIndex.cpp",
+                                    "../src/nGramSearch.cpp",
+                                    "../src/file.cpp",
+                                    "../src/indexSet.cpp",
+                                    "../src/smFile.cpp",
+                                    "pysnugglefish.cpp" ],
                           include_dirs = INCLUDE_DIRS,
                           library_dirs = LIBRARY_DIRS
                           )
@@ -40,10 +49,10 @@ extension_mod = Extension("pysnugglefish",
 
 setup (# Distribution meta-data
        name = "pysnugglefish",
-       version = "0.1",
+       version = "0.2",
        description = "python bindings for snugglefish",
-       author = "Shayne Snow",
-       author_email = "scaswell@mitre.org",
+       author = "Wesley Shields",
+       author_email = "wshields@mitre.org",
        license = "BSD",
        long_description = "Python bindings for snugglefish",
        ext_modules = [ extension_mod ]
