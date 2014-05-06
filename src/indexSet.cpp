@@ -57,7 +57,7 @@ indexSet::~indexSet(){
     }
 }
 
-bool indexSet::close(){
+void indexSet::close(){
     if (this->indexFile){
         this->indexFile->close();
         delete this->indexFile;
@@ -71,7 +71,7 @@ bool indexSet::close(){
 
 }
 
-bool indexSet::create(ngram_t_numfiles nFiles){
+void indexSet::create(ngram_t_numfiles nFiles){
     if (indexFile || nGramFile){//Already opened?
         throw runtime_error("Error opening index or ngram file");
     }
@@ -112,7 +112,7 @@ bool indexSet::create(ngram_t_numfiles nFiles){
 
 }
 
-bool indexSet::open(){
+void indexSet::open(){
     string indexFileName, nGramFileName;
     indexFileName = nGramFileName = this->fileBase;
     char number_string[FILE_NUM_BUFFER_SIZE];
@@ -142,14 +142,14 @@ bool indexSet::open(){
     indexEntries = indexMap + INDEX_HEADER_SIZE;
 }
 
-bool indexSet::addIndexData(uint64_t offset, uint32_t nFiles){
+void indexSet::addIndexData(uint64_t offset, uint32_t nFiles){
     indexFile->write((uint8_t*) &offset, sizeof(uint64_t));
     indexFile->write((uint8_t*) &nFiles, sizeof(uint32_t));
 }
 
-bool indexSet::addNGrams(uint32_t ngram, list<ngram_t_fidtype>* files){
+void indexSet::addNGrams(uint32_t ngram, list<ngram_t_fidtype>* files){
     if (!writable || !nGramFile){
-
+        //TODO
     }
 
     uint32_t size = files->size();
@@ -173,7 +173,7 @@ bool indexSet::addNGrams(uint32_t ngram, list<ngram_t_fidtype>* files){
 
 }
 
-bool indexSet::updateNumFiles(ngram_t_numfiles count){
+void indexSet::updateNumFiles(ngram_t_numfiles count){
     if (!writable || !indexFile){
         //TODO
     }

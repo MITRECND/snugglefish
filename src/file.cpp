@@ -240,11 +240,11 @@ bool file::write_at(int32_t location, uint8_t * data, size_t length){
 
 }
 
-bool file::read(uint8_t* dest, size_t length){
+void file::read(uint8_t* dest, size_t length){
    ::read(this->fd, dest, length); 
 }
 
-bool file::read_at(int32_t location, uint8_t* dest, size_t length){
+void file::read_at(int32_t location, uint8_t* dest, size_t length){
     lseek(this->fd, location, SEEK_SET);
     ::read (this->fd, dest, length);
 }

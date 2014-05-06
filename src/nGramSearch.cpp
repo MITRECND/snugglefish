@@ -172,9 +172,8 @@ void* nGramSearch::searchNGramThread(void* input){
         //list<index_entry> queryList = orderNGrams(nGramQuery);
         list< pair<uint64_t,size_t> > queryList = orderNGrams(tIndex, *(tdata->nGramQuery));
 
-        list<ngram_t_fidtype> matchedIds;
         //Get list of File Ids that match NGrams
-        searchAlpha((indexSet*) tIndex, queryList, matchedIds);
+        list<ngram_t_fidtype> matchedIds = searchAlpha((indexSet*) tIndex, queryList);
 
         //Convert File IDs to filenames
         for(list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
@@ -192,6 +191,8 @@ void* nGramSearch::searchNGramThread(void* input){
         tIndex->close();
         delete tIndex;
     }
+
+    return NULL;
 }
 
 list< pair<uint64_t, size_t> > nGramSearch::orderNGrams(indexSet* index, const vector<uint64_t> & nGramQuery){
@@ -235,10 +236,11 @@ list< pair<uint64_t, size_t> > nGramSearch::orderNGrams(indexSet* index, const v
 
 
 // Takes the list of sorted fids, and puts the common fids into matchedIds
-void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &queryList, list<ngram_t_fidtype> &matchedIds){
+list<ngram_t_fidtype> nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &queryList){
+    list<ngram_t_fidtype> matchedIds;
 
     if(queryList.size() == 0){
-        return;
+        return matchedIds;
     }
     // this gets the ngram list for the first file, and places them 
     // into the matchedIds list
@@ -288,4 +290,6 @@ void nGramSearch::searchAlpha(indexSet* index, list< pair<uint64_t,size_t> > &qu
             }
         }
     }
+
+    return matchedIds;
 }

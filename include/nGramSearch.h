@@ -80,7 +80,7 @@ namespace snugglefish {
             static std::list< std::pair<uint64_t, size_t> > orderNGrams(indexSet* index, const std::vector<uint64_t>& nGramQuery);
             //Alpha is just a placeholder name for this search type
             //I envision there will be multiple search types
-            static void searchAlpha(indexSet* index, std::list< std::pair<uint64_t,size_t> > & queryList, std::list<ngram_t_fidtype>& matchedIds);
+            static std::list<ngram_t_fidtype> searchAlpha(indexSet* index, std::list< std::pair<uint64_t,size_t> > & queryList);
             static void* searchNGramThread(void* input);
 
 

@@ -43,14 +43,13 @@ namespace snugglefish {
             smFile(std::string fileBase, uint8_t nGramSize);
             ~smFile();
 
-            bool create(ngram_t_fnlength maxfnLength);        
-            bool open(char readwrite);
+            void create(ngram_t_fnlength maxfnLength);
+            void open(char readwrite);
 
             bool flush();
 
-            bool addFileId(const char* fileName);
-            bool updateIndexFileCount(ngram_t_indexcount count);
-            bool updateFileCount(ngram_t_fidtype count);
+            void addFileId(const char* fileName);
+            void updateIndexFileCount(ngram_t_indexcount count);
 
             const ngram_t_indexcount getNumIndexFiles() { return numIndexFiles; }
             const ngram_t_fidtype getNumFiles() { return numFiles; }

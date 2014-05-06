@@ -72,11 +72,11 @@ namespace snugglefish {
 
             
             //Read, just front-ends the read syscall
-            bool read(uint8_t* destination, size_t length);
+            void read(uint8_t* destination, size_t length);
 
             //Read at specific locations (offset from SEEK_SET)
             //Using read_at and read together should be done carefully 
-            bool read_at(int32_t location, uint8_t* destination, size_t length);
+            void read_at(int32_t location, uint8_t* destination, size_t length);
 
             //Buffered writer
             bool write(uint8_t* data, size_t length);
