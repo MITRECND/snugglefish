@@ -34,19 +34,6 @@
 #include <stdint.h>
 #include <pthread.h>
 
-typedef struct _mi_data{
-    std::vector <std::string>* fileList;
-    uint32_t queue;
-    void* ngramindex;
-    
-    uint32_t ngramSize;
-
-    pthread_mutex_t filesMutex;
-    pthread_mutex_t nGramIndexMutex;
-        
-
-} mi_data;
-
 #ifdef __cplusplus
 extern "C" {
 #endif

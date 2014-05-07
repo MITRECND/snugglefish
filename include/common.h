@@ -26,10 +26,21 @@ SUCH DAMAGE.
 
 */
 
-
 #ifndef SNGCOMMON_H
 #define SNGCOMMON_H
 
+#include <vector>
+
+typedef struct _mi_data {
+    std::vector <std::string>* fileList;
+    uint32_t queue;
+    void* ngramindex;
+
+    uint32_t ngramSize;
+
+    pthread_mutex_t filesMutex;
+    pthread_mutex_t nGramIndexMutex;
+} mi_data;
 
 #define ngram_t_endian              uint32_t
 #define ngram_t_version             uint8_t

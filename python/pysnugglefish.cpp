@@ -31,6 +31,7 @@ SUCH DAMAGE.
 #include "nGramSearch.h"
 #include "nGramIndex.h"
 #include "fileindexer.h"
+#include "common.h"
 
 using namespace std;
 
@@ -51,14 +52,14 @@ typedef struct {
 } pysnugglefish;
 
 /* Facilitate destruction of pysnugglefish objects. */
-static void pysnugglefish_dealloc(pysnugglefish* self) {
+static void pysnugglefish_dealloc(pysnugglefish *self) {
 	Py_XDECREF(self->index);
 	Py_XDECREF(self->file_list);
 	self->ob_type->tp_free((PyObject*)self);
 }
 
 /* Construct a new pysnugglefish object. */
-static PyObject * pysnugglefish_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+static PyObject *pysnugglefish_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	pysnugglefish *self;
 	self = (pysnugglefish *)type->tp_alloc(type, 0);
 	if (self != NULL) { // if object created, init fields to defaults
@@ -83,8 +84,9 @@ static int pysnugglefish_init(pysnugglefish *self, PyObject *args, PyObject *kwd
 
 	static char *kwlist[] = {(char *) "index", (char *) "ngram_size", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "S|i", kwlist, &index, &ngrams)) {
-		return -1; // ngram size optional
+	// ngram size optional
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "S|i", kwlist, &index, &ngrams)) {
+		return -1;
 	}
 
 	if (ngrams != 3 && ngrams != 4) {
@@ -121,7 +123,7 @@ static PyMemberDef pysnugglefish_members[] = {
  * Search a snugglefish index for a given search input.
  * Args: searchString (string)
  */
-static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
+static PyObject *pysnugglefish_search(pysnugglefish *self, PyObject *args) {
 	char *searchString;
 	vector<string> *found;
 	long procs;
@@ -130,13 +132,14 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 		return NULL;
 	}
 
+	//This only works on some *nixes
+	// TODO figure out which systems don't support this call
+	procs = sysconf(_SC_NPROCESSORS_ONLN);
+	if (procs < 1) {
+		procs = 1;
+	}
+
 	try {
-		//This only works on some *nixes
-		// TODO figure out which systems don't support this call
-		procs = sysconf(_SC_NPROCESSORS_ONLN);
-		if (procs < 1){
-			procs = 1;
-		}
 		snugglefish::nGramSearch searcher(self->ngram_size, PyString_AsString(self->index), (uint32_t) procs);
 		vector<uint64_t> *ngrams = searcher.stringToNGrams(searchString);
 		found = searcher.searchNGrams(*ngrams);
@@ -146,62 +149,145 @@ static PyObject * pysnugglefish_search(pysnugglefish * self, PyObject *args) {
 	}
 
 	PyObject *ret = PyList_New(found->size());
-	for(size_t i = 0; i < found->size(); i++) {
+	for (size_t i = 0; i < found->size(); i++) {
 		PyList_SetItem(ret, i, Py_BuildValue("s", (*found)[i].c_str()));
 	}
+
 	delete found;
 	return ret;
 }
 
+void *indexerThread(void *input) {
+	mi_data *midata = (mi_data *) input;
+	snugglefish::nGramIndex *ngramindex = (snugglefish::nGramIndex *) midata->ngramindex;
+	snugglefish::fileIndexer indexer(midata->ngramSize);
+
+	while(1) {
+		pthread_mutex_lock(&midata->filesMutex);
+		if (midata->queue >= midata->fileList->size()) {
+			pthread_mutex_unlock(&midata->filesMutex);
+			break;
+		}
+
+		uint32_t i = midata->queue++;
+		pthread_mutex_unlock(&midata->filesMutex);
+
+		try {
+			vector<uint32_t> *processedFile = indexer.processFile((*(midata->fileList))[i].c_str());
+			if (processedFile != 0) {
+				pthread_mutex_lock(&midata->nGramIndexMutex);
+				ngramindex->addNGrams(processedFile, (*(midata->fileList))[i]);
+				pthread_mutex_unlock(&midata->nGramIndexMutex);
+			}
+		} catch (exception &e) {
+			return (void *) e.what();
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Index all of the files specified in the file_list member.
- * The file_list attribute must be a semicolon-delimited list.
  * Output the index at the path specified in the pysnugglefish index member.
  */
-static PyObject * pysnugglefish_index(pysnugglefish * self) {
+static PyObject *pysnugglefish_index(pysnugglefish *self, PyObject *args) {
 	vector<string> files;
-	//long procs;
-	Py_ssize_t ct = PyList_Size(self->file_list);
+	long procs;
 	int i;
+    pthread_t *indexers;
+    mi_data *midata;
+    void *status;
+	Py_ssize_t ct;
 
 	//This only works on some *nixes
 	// TODO figure out which systems don't support this call
-	/*
-	 * Indexing is single threaded for now, figure out how to do
-	 * this properly later.
-	 *
-	 * -- WXS
-	 */
-#if 0
 	procs = sysconf(_SC_NPROCESSORS_ONLN);
-	if (procs < 1){
+	if (procs < 1) {
 		procs = 1;
 	}
-#endif
+
+	// Threads optional
+	if (!PyArg_ParseTuple(args, "|i", &procs)) {
+		return NULL;
+	}
+
+	// If told to run with 0 threads, just use 1.
+	if (procs == 0) {
+		procs = 1;
+	}
+
+	// No files to index.
+	ct = PyList_Size(self->file_list);
+	if (ct == 0) {
+		Py_RETURN_NONE;
+	}
 
 	for (i = 0; i < ct; i++) {
 		files.push_back(PyString_AsString(PyList_GetItem(self->file_list, i)));
-		try {
-			snugglefish::nGramIndex ngramindex(self->ngram_size, PyString_AsString(self->index));
+	}
+
+	midata = new mi_data;
+	indexers = (pthread_t *) malloc(procs * sizeof(pthread_t));
+
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+	pthread_mutex_init(&(midata->filesMutex), NULL);
+	pthread_mutex_init(&(midata->nGramIndexMutex), NULL);
+
+	midata->fileList = &files;
+	midata->ngramSize = self->ngram_size;
+	midata->queue = 0;
+
+	try {
+		snugglefish::nGramIndex ngramindex(self->ngram_size, PyString_AsString(self->index));
+		if (self->max_buffer > 0) {
 			ngramindex.setmaxBufferSize(self->max_buffer);
-			snugglefish::fileIndexer indexer(self->ngram_size);
-			vector<uint32_t> *processedFile = indexer.processFile(PyString_AsString(PyList_GetItem(self->file_list, i)));
-			if (processedFile != 0) {
-				ngramindex.addNGrams(processedFile, PyString_AsString(PyList_GetItem(self->file_list, i)));
+		}
+
+		midata->ngramindex = &ngramindex;
+
+		for (uint32_t i = 0; i < procs; i++) {
+			pthread_create(&indexers[i], &attr, indexerThread, (void *) midata);
+		}
+
+		while (1) {
+			//Usage of mutex shouldn't matter
+			if (midata->queue >= files.size()) {
+				break;
 			}
-		} catch (exception &e){
+			sleep(1);
+		}
+
+		for (uint32_t i = 0; i < procs; i++) {
+			pthread_join(indexers[i], &status);
+			if (status) {
+				PyErr_SetString(SnuggleError, (char *) status);
+				return NULL;
+			}
+		}
+
+		} catch (exception &e) {
 			PyErr_SetString(SnuggleError, e.what());
 			return NULL;
 		}
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
+
+
+		pthread_mutex_destroy(&(midata->filesMutex));
+		pthread_mutex_destroy(&(midata->nGramIndexMutex));
+
+		delete midata;
+		free(indexers);
+
+		Py_RETURN_NONE;
 }
 
 /* Define the set of methods callable from a pysnugglefish object. */
 static PyMethodDef pysnugglefish_methods[] = {
-	{"search", (PyCFunction)pysnugglefish_search, METH_VARARGS, "Search the current index for an input."},
-	{"make_index", (PyCFunction)pysnugglefish_index, METH_NOARGS, "Make an index out of the current files list."},
+	{"search", (PyCFunction) pysnugglefish_search, METH_VARARGS, "Search the current index for an input."},
+	{"make_index", (PyCFunction) pysnugglefish_index, METH_VARARGS, "Make an index out of the current files list."},
 	{ NULL }  /* Sentinel */
 };
 

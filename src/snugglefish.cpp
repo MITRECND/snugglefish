@@ -50,6 +50,8 @@ SUCH DAMAGE.
 #include <utility>
 #include <pthread.h>
 
+#include "common.h"
+
 using namespace std;
 using namespace snugglefish;
 
