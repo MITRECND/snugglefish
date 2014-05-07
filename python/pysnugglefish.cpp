@@ -128,15 +128,21 @@ static PyObject *pysnugglefish_search(pysnugglefish *self, PyObject *args) {
 	vector<string> *found;
 	long procs;
 
-	if (!PyArg_ParseTuple(args, "s", &searchString)) {
-		return NULL;
-	}
-
 	//This only works on some *nixes
 	// TODO figure out which systems don't support this call
 	procs = sysconf(_SC_NPROCESSORS_ONLN);
 	if (procs < 1) {
 		procs = 1;
+	}
+
+	// Threads optional
+	if (!PyArg_ParseTuple(args, "s|i", &searchString, &procs)) {
+		return NULL;
+	}
+
+	if (procs <= 0) {
+		PyErr_SetString(SnuggleError, (char *) "Invalid threads");
+		return NULL;
 	}
 
 	try {
@@ -212,9 +218,9 @@ static PyObject *pysnugglefish_index(pysnugglefish *self, PyObject *args) {
 		return NULL;
 	}
 
-	// If told to run with 0 threads, just use 1.
-	if (procs == 0) {
-		procs = 1;
+	if (procs <= 0) {
+		PyErr_SetString(SnuggleError, (char *) "Invalid threads");
+		return NULL;
 	}
 
 	// No files to index.

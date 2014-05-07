@@ -2,10 +2,13 @@
 
 import sys
 import pysnugglefish
+import multiprocessing
 
 from optparse import OptionParser
 
 def main():
+    cpu_count = multiprocessing.cpu_count()
+
     parser = OptionParser()
     parser.add_option("-i", "--index", action="store_true", dest="index",
                       default=None, help="Index operation.")
@@ -14,7 +17,8 @@ def main():
     parser.add_option("-I", "--indexfile", action="store", dest="indexfile",
                       default="", help="Index file to search or create.")
     parser.add_option("-t", "--threads", action="store", dest="threads",
-                      default="", help="Number of threads to spawn (default is #cpus).")
+                      default=cpu_count,
+                      help="Number of threads to spawn (default is #cpus).")
 
     (opts, searchstring) = parser.parse_args()
 
@@ -28,35 +32,40 @@ def main():
 
     s = pysnugglefish.init(opts.indexfile)
 
+    try:
+        threads = int(opts.threads)
+    except Exception as e:
+        print "[!] Invalid threads: %s" % e.message
+        return
+
+    if threads <= 0:
+        print "[!] Invalid threads. Defaulting to %i." % cpu_count
+        threads = cpu_count
+
     if opts.index:
         s.file_list = [ line.rstrip('\n') for line in sys.stdin.readlines() ]
-        if opts.threads:
-            try:
-                threads = int(opts.threads)
-            except Exception as e:
-                print "[!] %s" % e
-                return
-            print "[+] Indexing %i files with %i threads." % (len(s.file_list),
-                                                              threads)
-            print "[+] This might take a while... ;)"
+        msg = "[+] Indexing %i files with %i threads." % (len(s.file_list),
+                                                          threads)
+        print "[+] This might take a while... ;)"
+        try:
             s.make_index(threads)
-        else:
-            print "[+] Indexing %i files with default threads." % len(s.file_list)
-            print "[+] This might take a while... ;)"
-            s.make_index()
+        except Exception as e:
+            print "[!] Exception while indexing: %s" % e.message
     elif opts.search:
-        if searchstring:
-            print "[+] Searching for %s" % searchstring
-        else:
+        if not searchstring:
             searchstring = raw_input("Search string: ")
 
         if not searchstring:
             print "[!] Must enter a search string."
             return
 
-        results = s.search(searchstring)
-        for result in results:
-            print result
+        print "[+] Searching for %s with %i threads" % (searchstring, threads)
+        try:
+            results = s.search(searchstring, threads)
+            for result in results:
+                print result
+        except Exception as e:
+            print "[!] Exception while searching: %s" % e.message
 
 if __name__ == '__main__':
     main()
