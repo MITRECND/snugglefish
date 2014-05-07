@@ -30,6 +30,7 @@ SUCH DAMAGE.
 #define SNGCOMMON_H
 
 #include <vector>
+#include <string>
 
 typedef struct _mi_data {
     std::vector <std::string>* fileList;
