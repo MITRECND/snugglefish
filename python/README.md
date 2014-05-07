@@ -38,7 +38,7 @@ To index, simply feed the pysnugglefish instance with configuration options, the
 		obj.max_files = 100000 # defaults to no maximum (0)
 		obj.make_index() # create the index file
 
-The snugglefish code that the module wraps will print out information about the process to the console.  
+If you are indexing lots of files this will be very memory and CPU intensive, so be patient.
 
 Searching with PySnugglefish
 ============================
