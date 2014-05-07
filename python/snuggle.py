@@ -5,9 +5,6 @@ import pysnugglefish
 
 from optparse import OptionParser
 
-indexes = '/Users/wxs/Documents/dev/snugglefish-indexes/test'
-search_string = "This program"
-
 def main():
     parser = OptionParser()
     parser.add_option("-i", "--index", action="store_true", dest="index",
