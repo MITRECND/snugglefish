@@ -177,9 +177,8 @@ void* nGramSearch::searchNGramThread(void* input){
         list<ngram_t_fidtype> matchedIds = searchAlpha((indexSet*) tIndex, queryList);
 
         //Convert File IDs to filenames
-        for(list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
-                ft != matchedIds.end(); ft++){
-
+        list<ngram_t_fidtype>::iterator ft = matchedIds.begin();
+        while(ft != matchedIds.end()){
             pthread_mutex_lock(& tdata->smFileMutex);
             string matched_filename = tdata->masterFile->getFilebyId(*ft);
             pthread_mutex_unlock(& tdata->smFileMutex);
@@ -187,6 +186,7 @@ void* nGramSearch::searchNGramThread(void* input){
             pthread_mutex_lock(& tdata->mfMutex);
             tdata->matchedFiles->push_back(matched_filename);
             pthread_mutex_unlock(& tdata->mfMutex);
+            ft++;
         }
 
         tIndex->close();
