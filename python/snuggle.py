@@ -52,6 +52,7 @@ def main():
         except Exception as e:
             print "[!] Exception while indexing: %s" % e.message
     elif opts.search:
+        searchstring = ' '.join(searchstring)
         if not searchstring:
             searchstring = raw_input("Search string: ")
 
