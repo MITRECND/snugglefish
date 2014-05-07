@@ -30,7 +30,7 @@ SUCH DAMAGE.
 #include <vector>
 #include "nGramSearch.h"
 #include "nGramIndex.h"
-#include "fileindexer.h"
+#include "fileIndexer.h"
 #include "common.h"
 
 using namespace std;
