@@ -141,6 +141,7 @@ vector<string>* nGramSearch::searchNGrams(vector<uint64_t> nGramQuery){
     pthread_mutex_destroy(&(tdata->queueMutex));
     pthread_mutex_destroy(&(tdata->smFileMutex));
     pthread_mutex_destroy(&(tdata->mfMutex));
+    pthread_attr_destroy(&attr);
 
     free(threads);
     delete tdata;

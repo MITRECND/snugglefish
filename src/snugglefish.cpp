@@ -393,6 +393,7 @@ void make_index(string indexFileName, vector <string> fileNames, uint32_t ngramS
 
     pthread_mutex_destroy(&(midata->filesMutex));
     pthread_mutex_destroy(&(midata->nGramIndexMutex));
+    pthread_attr_destroy(&attr);
 
     delete midata;
     free(indexers);

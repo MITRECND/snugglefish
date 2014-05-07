@@ -283,6 +283,7 @@ static PyObject *pysnugglefish_index(pysnugglefish *self, PyObject *args) {
 
 		pthread_mutex_destroy(&(midata->filesMutex));
 		pthread_mutex_destroy(&(midata->nGramIndexMutex));
+		pthread_attr_destroy(&attr);
 
 		delete midata;
 		free(indexers);
