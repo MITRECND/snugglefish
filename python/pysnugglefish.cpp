@@ -195,9 +195,9 @@ static PyObject *pysnugglefish_index(pysnugglefish *self, PyObject *args) {
 	vector<string> files;
 	long procs;
 	int i;
-    pthread_t *indexers;
-    mi_data *midata;
-    void *status;
+	pthread_t *indexers;
+	mi_data *midata;
+	void *status;
 	Py_ssize_t ct;
 
 	//This only works on some *nixes
