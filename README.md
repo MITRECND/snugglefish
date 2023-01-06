@@ -1,3 +1,5 @@
+NOTICE: This proof-of-concept is no longer being maintained.  See [BigGrep](https://github.com/cmu-sei/BigGrep) and [UrsaDB](https://github.com/CERT-Polska/ursadb) for similar capabilities.
+
 Snugglefish
 ========
 
